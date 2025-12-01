@@ -1,0 +1,25 @@
+import numpy as np
+
+from Pipeline.pipeline import VisualPipeline
+from config import FREQ_BINS
+
+POWER_LOG = 1
+
+class RGBPPipeline(VisualPipeline):
+    def __init__(self, rgb, alpha, power_log=POWER_LOG):
+        super().__init__()
+        self.rgb = rgb
+        self.alpha = alpha
+        self.output_rgb = np.zeros((FREQ_BINS, 3))
+        self.power_log = power_log
+
+    def update(self):
+        rgb = self.rgb[:FREQ_BINS]
+
+        # print(self.alpha)
+        # print(np.power((self.alpha / 255), self.power_log)[:, None])
+
+        self.output_rgb[:] = (
+                rgb *
+                (np.power((self.alpha / 255), self.power_log)[:, None])
+        )

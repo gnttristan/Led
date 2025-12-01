@@ -39,8 +39,6 @@ class NotesAmplitudes(AudioUpdatable):
         self.buffer_to_amplitudes()
 
     def buffer_to_amplitudes(self):
-        print(self.bins)
-
         windowed = self.buffer.data * self.window
         fft_result = np.fft.rfft(windowed)
         full_amplitudes = np.abs(fft_result)

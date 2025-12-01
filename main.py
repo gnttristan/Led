@@ -1,23 +1,23 @@
 import time
 
 import numpy as np
-from pyqtgraph.Qt import QtCore, QtWidgets
-import sys
+import serial
+from serial import SerialTimeoutException
 
 from Pipeline.outlier_frequencies import OutlierFrequenciesPipeline
-from Pipeline.rgba_pipeline import RGBAPipeline
-from Pipeline.value_transformer import ValueTransformerPipeline
+from Pipeline.rgbp_pipeline import RGBPPipeline
+from Pipeline.rms import RMSPipeline
 from Updatable.updatable import visual_updatable_objects, audio_updatable_objects
 from amplitudes.amplitudes import Amplitudes
-from amplitudes.expanded_amplitudes import ExpandedAmplitudes
-from amplitudes.notes_amplitudes import NotesAmplitudes
 from buffer.buffer import Buffer
 from config import *
-from energy.energy_bass import EnergyBassDetector
 from rainbow.gradient_rainbow import GradiantRainbow
 from stream.stream import Stream
-from visuals.line_chart import LineChart
-from visuals.spectrogram_chart import SpectrogramChart
+
+import serial, time, struct
+from crcmod.predefined import mkPredefinedCrcFun  # pip install crcmod
+crc16 = mkPredefinedCrcFun('crc-ccitt-false')
+seq = 0
 
 chunk_data = np.zeros(CHUNK_SIZE)
 def audio_update(indata, frames, time, status):
@@ -39,9 +39,9 @@ amplitudes = Amplitudes(
     buffer=buffer,
     correlation_offset=0.5,
     correlation_step=0.1,
-    powering=0.9,
+    powering=1,
     normalisation=True,
-    log=0.4
+    log=0.6
 )
 
 
@@ -53,46 +53,66 @@ amplitudes = Amplitudes(
 #     buffer=buffer,
 # )
 
+rms_pipeline = RMSPipeline(
+    buffer_data=buffer.data
+)
+
 outlier_frequencies_pipeline = OutlierFrequenciesPipeline(
-    input_amplitudes=amplitudes.data
+    input_amplitudes=amplitudes.data,
+    # level_multiplier=rms_pipeline.data
 )
 
 gradient_rainbow = GradiantRainbow()
 
-rgba_pipeline = RGBAPipeline(
+rgbp_pipeline = RGBPPipeline(
     rgb=gradient_rainbow.data,
     alpha=outlier_frequencies_pipeline.alpha
 )
 
-spectrogram_chart = SpectrogramChart(
-    data=outlier_frequencies_pipeline.amplitudes,
-    title="Amplitudes",
-    number_points=outlier_frequencies_pipeline.amplitudes.shape[0],
-    left_label="Frequency",
-    bottom_label="Amplitude",
-    brushes=rgba_pipeline.rgba
-)
-
-# line_chart = LineChart(
-#     input_data=energy_bass_detector.kick_energy_ratio,
-#     title="Energy Kick Ratio",
-#     number_points=100,
-#     left_label="Energy",
-#     bottom_label="Time"
+# spectrogram_chart = SpectrogramChart(
+#     data=outlier_frequencies_pipeline.amplitudes,
+#     title="Amplitudes",
+#     number_points=outlier_frequencies_pipeline.amplitudes.shape[0],
+#     left_label="Frequency",
+#     bottom_label="Amplitude",
+#     brushes=rgbp_pipeline.output_rgb
 # )
 
-win = spectrogram_chart.draw()
-# win2 = line_chart.draw()
+# win = spectrogram_chart.draw()
 
 main_stream.start()
 
+ser = serial.Serial(
+    port='COM20',
+    baudrate=115200,
+    timeout=0,
+    write_timeout=0.1
+)
 
-timer = QtCore.QTimer()
-timer.timeout.connect(visual_update)
-timer.start(DELAY_UPDATE)  # ms
+def protocol_byting(array):
+    packet_size = 64
+    nb_position_bytes = np.ceil(np.size(array) / (packet_size - 1))
+    gd_allonged = np.hstack((array.flatten(), np.zeros((packet_size - 1) - np.mod(np.size(array), (packet_size - 1)))))
+    gd_packeted = gd_allonged.reshape((int(nb_position_bytes), packet_size - 1))
+    gd_byted = np.hstack((np.arange(nb_position_bytes)[:, None], gd_packeted))
+    return gd_byted.flatten()
 
-# Start Qt event loop
-if __name__ == '__main__':
-    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-        time.sleep(1)
-        QtWidgets.QApplication.instance().exec_()
+while True:
+    visual_update()
+    # msg = protocol_byting(gradient_rainbow.data[:300])
+    msg_bytes = gradient_rainbow.data[:300].clip(0, 255).astype(np.uint8).tobytes()
+    hdr = b'\xAA' + bytes([seq]) + struct.pack('>H', len(msg_bytes))
+    c = crc16(hdr + msg_bytes)
+    frame = hdr + msg_bytes + struct.pack('>H', c)
+
+    try:
+        ser.write(msg_bytes)
+        print(len(frame))
+        print(msg_bytes[:3])
+        # ser.flush()
+    except serial.SerialTimeoutException:
+        pass
+        # print("Serial buffer full, skipping frame")
+
+    seq = (seq + 1) & 0xFF
+    time.sleep(0.05)

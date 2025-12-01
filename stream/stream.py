@@ -7,16 +7,17 @@ class Stream:
         self.callback = callback
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size
+        self.sd_stream = None
 
     def start(self):
-        sd_stream = sd.InputStream(
+        self.sd_stream = sd.InputStream(
             callback=self.callback,
             channels=1,
             samplerate=self.sample_rate,
             blocksize=self.chunk_size
         )
 
-        sd_stream.start()
+        self.sd_stream.start()
 
     def callback(self, _indata, _frames, _time, _status):
         pass
