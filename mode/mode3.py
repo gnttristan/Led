@@ -1,19 +1,19 @@
 import numpy as np
 from pyqtgraph.Qt import QtCore, QtWidgets
 import sys
-
 from Pipeline.outlier_frequencies import OutlierFrequenciesPipeline
-from Pipeline.rgba_pipeline import RGBAPipeline
-from Pipeline.value_transformer import ValueTransformerPipeline
+from Pipeline.rgbp_pipeline import RGBPPipeline
+from Pipeline.rms import RMSPipeline
 from Updatable.updatable import visual_updatable_objects, audio_updatable_objects
 from amplitudes.amplitudes import Amplitudes
 from buffer.buffer import Buffer
 from config import *
-from energy.energy_bass import EnergyBassDetector
 from rainbow.gradient_rainbow import GradiantRainbow
 from stream.stream import Stream
-from visuals.line_chart import LineChart
-from visuals.spectrogram_chart import SpectrogramChart
+from crcmod.predefined import mkPredefinedCrcFun  # pip install crcmod
+crc16 = mkPredefinedCrcFun('crc-ccitt-false')
+
+seq = 0
 
 chunk_data = np.zeros(CHUNK_SIZE)
 def audio_update(indata, frames, time, status):
@@ -35,45 +35,46 @@ amplitudes = Amplitudes(
     buffer=buffer,
     correlation_offset=0.5,
     correlation_step=0.1,
-    powering=0.8,
+    powering=1,
     normalisation=True,
-    log=0.5
+    log=0.6
 )
 
-energy_bass_detector = EnergyBassDetector(
-    buffer=buffer,
+
+# expanded_amplitudes = ExpandedAmplitudes(
+#     amplitudes=notes_amplitudes.data,
+# )
+
+# energy_bass_detector = EnergyBassDetector(
+#     buffer=buffer,
+# )
+
+rms_pipeline = RMSPipeline(
+    buffer_data=buffer.data
 )
 
 outlier_frequencies_pipeline = OutlierFrequenciesPipeline(
-    amplitudes=amplitudes.data
+    input_amplitudes=amplitudes.data,
+    # level_multiplier=rms_pipeline.data
 )
 
 gradient_rainbow = GradiantRainbow()
 
-rgba_pipeline = RGBAPipeline(
+rgbp_pipeline = RGBPPipeline(
     rgb=gradient_rainbow.data,
     alpha=outlier_frequencies_pipeline.alpha
 )
 
-spectrogram_chart = SpectrogramChart(
-    data=outlier_frequencies_pipeline.amplitudes,
-    title="Amplitudes",
-    number_points=outlier_frequencies_pipeline.amplitudes.shape[0],
-    left_label="Frequency",
-    bottom_label="Amplitude",
-    brushes=rgba_pipeline.rgba
-)
-
-# line_chart = LineChart(
-#     input_data=energy_bass_detector.kick_energy_ratio,
-#     title="Energy Kick Ratio",
-#     number_points=100,
-#     left_label="Energy",
-#     bottom_label="Time"
+# spectrogram_chart = SpectrogramChart(
+#     data=outlier_frequencies_pipeline.amplitudes,
+#     title="Amplitudes",
+#     number_points=outlier_frequencies_pipeline.amplitudes.shape[0],
+#     left_label="Frequency",
+#     bottom_label="Amplitude",
+#     brushes=rgbp_pipeline.output_rgb
 # )
 
-win = spectrogram_chart.draw()
-# win2 = line_chart.draw()
+# win = spectrogram_chart.draw()
 
 main_stream.start()
 

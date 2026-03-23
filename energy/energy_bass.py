@@ -35,10 +35,11 @@ class EnergyBassDetector(AudioUpdatable):
 
         kick_energy_ratio = (self.energy_low_filter.data - self.avg_window_elf.data) / self.avg_window_rms.data
 
-        self.kick_energy_ratio[:] = np.maximum(
-            np.clip(kick_energy_ratio, 0, 1),
-            self.old_kick_energy_ratio - 0.01
-        )
+        if np.clip(kick_energy_ratio, 0, 1) == 1:
+            self.kick_energy_ratio[:] = kick_energy_ratio
+        elif self.kick_energy_ratio > 0:
+            self.kick_energy_ratio[:] = np.maximum(self.kick_energy_ratio - 0.001, 0)
+
         self.old_kick_energy_ratio[:] = self.kick_energy_ratio
 
 

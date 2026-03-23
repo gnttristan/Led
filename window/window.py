@@ -4,11 +4,11 @@ from Updatable.updatable import AudioUpdatable
 
 
 class Window(AudioUpdatable):
-    def __init__(self, input_data, length):
+    def __init__(self, input_data, length, init_value=0.):
         super().__init__()
         self.length = length
         self.input_data = input_data # Data to aggregate
-        self.data = np.zeros((length, input_data.shape[0]))
+        self.data = np.repeat(init_value, length * input_data.shape[0]).reshape(length, input_data.shape[0])
         self.window_fcts = []
 
     def update(self):

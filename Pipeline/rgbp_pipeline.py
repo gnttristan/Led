@@ -10,14 +10,11 @@ class RGBPPipeline(VisualPipeline):
         super().__init__()
         self.rgb = rgb
         self.alpha = alpha
-        self.output_rgb = np.zeros((FREQ_BINS, 3))
+        self.output_rgb = np.zeros((FREQ_BINS, 3), dtype=np.float32)
         self.power_log = power_log
 
     def update(self):
         rgb = self.rgb[:FREQ_BINS]
-
-        # print(self.alpha)
-        # print(np.power((self.alpha / 255), self.power_log)[:, None])
 
         self.output_rgb[:] = (
                 rgb *

@@ -33,7 +33,7 @@ class OutlierFrequenciesPipeline(AudioPipeline):
         self.large_window_amp = Window(input_data=self.input_amplitudes, length=500)
         self.avg_large_window_amp = AveragedWindowFct(self.large_window_amp, avg_axis=0)
 
-        self.level_multiplier_window = Window(input_data=self.level_multiplier, length=3000)
+        self.level_multiplier_window = Window(input_data=self.level_multiplier, length=3000, init_value=1)
         self.average_level = AveragedWindowFct(self.level_multiplier_window)
 
         self.normalized_alpha = np.zeros(FREQ_BINS)

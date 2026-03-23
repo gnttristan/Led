@@ -3,10 +3,7 @@ import time
 import pandas
 import serial
 import numpy as np
-
-from Pipeline.outlier_frequencies import OutlierFrequenciesPipeline
 from Pipeline.rgbp_pipeline import RGBPPipeline
-from Pipeline.rms import RMSPipeline
 from Pipeline.value_transformer import ValueTransformerPipeline
 from Pipeline.whitening_pipeline import WhiteningPipeline
 from Updatable.updatable import visual_updatable_objects, audio_updatable_objects
@@ -40,42 +37,40 @@ buffer = Buffer(indata=chunk_data)
 
 amplitudes = Amplitudes(
     buffer=buffer,
-    correlation_offset=0.5,
-    correlation_step=0.1,
-    powering=1,
+    powering=0.8,
     normalisation=True,
-    log=0.6
+    log=1.5
 )
 
-# expanded_amplitudes = ExpandedAmplitudes(
-#     amplitudes=notes_amplitudes.data,
+energy_bass_detector = EnergyBassDetector(
+    buffer=buffer,
+)
+
+# tempo_detector = TempoDetector(
+#     spikes=energy_bass_detector.data,
 # )
 
-# energy_bass_detector = EnergyBassDetector(
-#     buffer=buffer,
+gradient_rainbow = GradiantRainbow(inv_fraction=3)
+
+# energy_to_alpha_pipeline = EnergyToAlphaPipeline(
+#     energy=energy_bass_detector.kick_energy_ratio
 # )
 
-rms_pipeline = RMSPipeline(
-    buffer_data=buffer.data
+whitening_pipeline = WhiteningPipeline(
+    input_rgb=gradient_rainbow.data,
+    white_level=energy_bass_detector.kick_energy_ratio
 )
-
-outlier_frequencies_pipeline = OutlierFrequenciesPipeline(
-    input_amplitudes=amplitudes.data,
-    # level_multiplier=rms_pipeline.data
-)
-
-gradient_rainbow = GradiantRainbow()
 
 value_transformer_pipeline = ValueTransformerPipeline(
-    input_value=outlier_frequencies_pipeline.alpha,
-    input_value_interval=[0, 255],
-    output_value_interval=[0, 60],
-    power=10
+    input_value=amplitudes.data,
+    input_value_interval=[0, 1],
+    output_value_interval=[50, 255],
+    power=4
 )
 
 rgbp_pipeline = RGBPPipeline(
-    rgb=gradient_rainbow.data,
-    alpha=value_transformer_pipeline.output_value
+    rgb = whitening_pipeline.output_rgb,
+    alpha = value_transformer_pipeline.output_value
 )
 
 # spectrogram_chart = SpectrogramChart(
@@ -118,7 +113,7 @@ def protocol_byting(array):
 while True:
     visual_update()
     # msg = protocol_byting(gradient_rainbow.data[:300])
-    msg_bytes = np.clip((rgbp_pipeline.output_rgb[:300] - 10) / 3, 6, 90).astype(np.int32)
+    msg_bytes = np.clip((rgbp_pipeline.output_rgb[:300] - 10) / 3, 5, 90).astype(np.int32)
     # hdr = b'\xAA' + bytes([seq]) + struct.pack('>H', len(msg_bytes))
     # c = crc16(hdr + msg_bytes)
     # frame = hdr + msg_bytes + struct.pack('>H', c)

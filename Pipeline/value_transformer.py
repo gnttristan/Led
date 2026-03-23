@@ -20,7 +20,7 @@ class ValueTransformerPipeline(AudioPipeline):
         self.output_value_interval = output_value_interval
         self.power = power
 
-        self.output_value = np.zeros(1)
+        self.output_value = np.zeros(self.input_value.shape[-1])
 
 
     def update(self):

@@ -8,7 +8,7 @@ class ExpandedAmplitudes(AudioUpdatable):
         super().__init__()
         self.amplitudes = amplitudes
         self.size = size
-        self.groups_indexes = np.cumsum(np.repeat(size / amplitudes.shape[0], amplitudes.shape[0], )).astype(int)
+        self.groups_indexes = np.cumsum(np.repeat(size / amplitudes.shape[0], amplitudes.shape[0])).astype(int)
         self.diff_indexes = np.hstack((self.groups_indexes[0], np.diff(self.groups_indexes)))
         self.data = np.zeros(size)
 
