@@ -1,0 +1,11 @@
+# Core runtime dependencies inferred from project imports
+numpy
+scipy
+sounddevice
+pyserial
+crcmod
+
+# Used by desktop/debug and visualization entrypoints
+pandas
+pyqtgraph
+PyQt5
