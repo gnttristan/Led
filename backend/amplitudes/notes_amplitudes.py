@@ -39,7 +39,7 @@ class NotesAmplitudes(AudioUpdatable):
         self.buffer_to_amplitudes()
 
     def buffer_to_amplitudes(self):
-        windowed = self.buffer.data * self.window
+        windowed = self.buffer * self.window
         fft_result = np.fft.rfft(windowed)
         full_amplitudes = np.abs(fft_result)
         updated_amplitudes = full_amplitudes[self.bins] * np.power(self.bins.astype(np.float64), 1.15)
@@ -51,7 +51,7 @@ class NotesAmplitudes(AudioUpdatable):
                 [0, 1]
             )
 
-        self.data[:] = updated_amplitudes
+        self.data.value[:] = updated_amplitudes
 
 
     def freq_to_bin(self, frequencies, fft_size):

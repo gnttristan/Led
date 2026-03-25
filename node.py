@@ -11,25 +11,23 @@ from frontend.nodes.buffer import BufferNode
 from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.stream import StreamNode
 
-
 registerNodeType(BufferNode, [("LED",)])
 registerNodeType(AmplitudesNode, [("LED",)])
 
-
-def build_flowchart():
+def build_flowchart(stream_node):
     flowchart = Flowchart(
         terminals={
-            "chunk": {"io": "in"},
             "amplitudes": {"io": "out"},
         }
     )
 
+    flowchart.addNode(stream_node, "Stream", pos=(-180, 0))
     buffer_node = flowchart.createNode("Buffer", pos=(0, 0))
     amplitudes_node = flowchart.createNode("Amplitudes", pos=(180, 0))
 
-    flowchart.connectTerminals(flowchart["chunk"], buffer_node["indata"])
+    flowchart.connectTerminals(stream_node["chunk"], buffer_node["indata"])
     flowchart.connectTerminals(buffer_node["data"], amplitudes_node["buffer"])
-    flowchart.connectTerminals(amplitudes_node["amplitudes"], flowchart["amplitudes"])
+    flowchart.connectTerminals(amplitudes_node["data"], flowchart["amplitudes"])
 
     return flowchart
 
@@ -37,8 +35,8 @@ def build_flowchart():
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    flowchart = build_flowchart()
-    stream_node = StreamNode("StreamInput")
+    stream_node = StreamNode()
+    flowchart = build_flowchart(stream_node)
     chart = SpectrogramChart(
         data=np.zeros(FREQ_BINS),
         title="Node Spectrogram",
@@ -56,7 +54,6 @@ def main():
     graph_window.show()
 
     def refresh():
-        flowchart.setInput(chunk=stream_node.process()["chunk"])
         outputs = flowchart.outputValues()
 
         amplitudes = outputs.get("amplitudes")

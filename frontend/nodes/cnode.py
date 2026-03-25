@@ -1,11 +1,12 @@
 from pyqtgraph.flowchart import Node
+from frontend.overrides.CTerminal import CTerminal
 
 from backend.attributes.attribute import AttributeType
 
 
 class CNode(Node):
-    def __init__(self, obj):
-        self.obj = obj()
+    def __init__(self, obj, *args):
+        self.obj = obj(*args)
 
         obj_attributes = self.obj.__dict__.items()
         input_params = {
@@ -21,6 +22,18 @@ class CNode(Node):
         self.output_params = tuple(output_params.keys())
         terminals = input_params | output_params
         super().__init__(obj.__name__, terminals=terminals)
+
+    def addTerminal(self, name, **opts):
+        name = self.nextTerminalName(name)
+        term = CTerminal(self, name, **opts)
+        self.terminals[name] = term
+        if term.isInput():
+            self._inputs[name] = term
+        elif term.isOutput():
+            self._outputs[name] = term
+        self.graphicsItem().updateTerminals()
+        self.sigTerminalAdded.emit(self, term)
+        return term
 
     def process(self, display=True, **kwargs):
         for name in self.input_params:

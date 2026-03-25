@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.signal import get_window
 
+from backend.attributes.attribute import Attribute, AttributeType
 from backend.config import *
 from backend.updatable.updatable import AudioUpdatable
 
@@ -9,7 +10,7 @@ amplitudes = np.zeros(FREQ_BINS)
 class Amplitudes(AudioUpdatable):
     def __init__(
             self,
-            buffer,
+            buffer=np.zeros(FFT_SIZE),
             min_frequency=MIN_FREQUENCY,
             max_frequency=MAX_FREQUENCY,
             fft_size=FFT_SIZE,
@@ -23,7 +24,7 @@ class Amplitudes(AudioUpdatable):
         super().__init__()
 
         self.freq_bins = freq_bins
-        self.buffer = buffer
+        self.buffer = Attribute(buffer, attr_type=AttributeType.IN)
         self.fft_size = fft_size
         self.window = get_window('hann', fft_size)
 
@@ -33,7 +34,7 @@ class Amplitudes(AudioUpdatable):
 
         self.bins = self.freq_to_bin(self.frequencies, fft_size)
 
-        self.data = np.zeros(freq_bins)
+        self.data = Attribute(np.zeros(freq_bins), attr_type=AttributeType.OUT)
 
         self.correlation_offset = correlation_offset
         self.correlation_step = correlation_step
@@ -45,7 +46,7 @@ class Amplitudes(AudioUpdatable):
         self.buffer_to_amplitudes()
 
     def buffer_to_amplitudes(self):
-        windowed = self.buffer.data * self.window
+        windowed = self.buffer.value * self.window
         fft_result = np.fft.rfft(windowed)
         full_amplitudes = np.abs(fft_result)
         updated_amplitudes = full_amplitudes[self.bins] * np.power(self.bins.astype(np.float64),
@@ -73,7 +74,7 @@ class Amplitudes(AudioUpdatable):
                 [0, 1]
             )
 
-        self.data[:] = updated_amplitudes
+        self.data.value[:] = updated_amplitudes
 
     def freq_to_bin(self, frequencies, fft_size):
         return np.round(frequencies / self.max_frequency * (fft_size / 2)).astype(int)
