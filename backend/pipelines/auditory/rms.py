@@ -9,5 +9,5 @@ class RMSPipeline(AudioPipeline):
         self.buffer_data = buffer_data
         self.data = np.ones(1)
 
-    def update(self):
+    def c_update(self):
         self.data[:] = np.sqrt(np.mean(self.buffer_data ** 2))

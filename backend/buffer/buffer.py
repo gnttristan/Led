@@ -1,23 +1,23 @@
 import numpy as np
 
 from backend.attributes.attribute import Attribute, AttributeType
-from backend.components.sliders.linear_slider import BLinearSlider
 from backend.config import FFT_SIZE, CHUNK_SIZE
 from backend.updatable.updatable import AudioUpdatable
+from frontend.components.sliders.linear_slider import LinearSlider
 
 
 class Buffer(AudioUpdatable):
     def __init__(self, indata=np.zeros(CHUNK_SIZE), fft_size=FFT_SIZE, chunk_size=CHUNK_SIZE):
         super().__init__()
 
-        self.length = BLinearSlider(CHUNK_SIZE, FFT_SIZE * 4, value=fft_size, attr_type=AttributeType.IN)
-        self.chunk_size = BLinearSlider(1, FFT_SIZE, value=chunk_size, attr_type=AttributeType.IN)
+        self.length = LinearSlider(CHUNK_SIZE, FFT_SIZE * 4, value=fft_size, attr_type=AttributeType.IN)
+        self.chunk_size = LinearSlider(1, FFT_SIZE, value=chunk_size, attr_type=AttributeType.IN)
         self.indata = Attribute(indata, attr_type=AttributeType.IN)
 
         self.data = Attribute(np.zeros(fft_size), attr_type=AttributeType.OUT)
 
 
-    def update(self):
+    def c_update(self):
         self.roll()
 
     def roll(self):

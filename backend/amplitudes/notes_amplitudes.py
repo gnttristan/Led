@@ -35,7 +35,7 @@ class NotesAmplitudes(AudioUpdatable):
         self.normalisation = normalisation
         self.expand = expand
 
-    def update(self):
+    def c_update(self):
         self.buffer_to_amplitudes()
 
     def buffer_to_amplitudes(self):

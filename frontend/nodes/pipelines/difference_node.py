@@ -15,7 +15,7 @@ class DifferenceNode(Node):
         }
         super().__init__(name, terminals=terminals)
 
-    def process(self, a, b, display=True):
+    def c_update(self, a, b, display=True):
         del display
         if a is None:
             a = np.zeros(FREQ_BINS)

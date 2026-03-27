@@ -1,13 +1,15 @@
-from pyqtgraph.Qt import QtWidgets
+import math
 
-from backend.components.sliders import BLogSlider
-from frontend.components.sliders import FSlider
+from frontend.components.sliders.linear_slider import LinearSlider
 
 
-class FLogSlider(QtWidgets.QWidget):
-    def __init__(self, b_log_slider: BLogSlider):
-        super().__init__()
+class LogSlider(LinearSlider):
+    def map_value(self, ratio):
+        min_log = math.log(self.min_value)
+        max_log = math.log(self.max_value)
+        return math.exp(min_log + (max_log - min_log) * ratio)
 
-        self.slider = FSlider(b_log_slider)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.slider)
+    def unmap_value(self, value):
+        min_log = math.log(self.min_value)
+        max_log = math.log(self.max_value)
+        return (math.log(value) - min_log) / (max_log - min_log)

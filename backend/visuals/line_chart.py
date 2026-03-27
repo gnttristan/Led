@@ -28,11 +28,11 @@ class LineChart(Chart):
 
         return win
 
-    def update(self):
+    def c_update(self):
         if self.line is None:
             raise Exception("Chart needs to be drawed")
 
-        super().update()
+        super().c_update()
 
         x = np.arange(len(self.data))
         self.roll()

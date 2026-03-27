@@ -5,7 +5,7 @@ class Updatable:
     def __init__(self):
         pass
 
-    def update(self):
+    def c_update(self):
         pass
 
 class AudioUpdatable(Updatable):
@@ -13,13 +13,13 @@ class AudioUpdatable(Updatable):
         super().__init__()
         audio_updatable_objects.append(self)
 
-    def update(self):
-        super().update()
+    def c_update(self):
+        super().c_update()
 
 class VisualUpdatable(Updatable):
     def __init__(self):
         super().__init__()
         visual_updatable_objects.append(self)
 
-    def update(self):
-        super().update()
+    def c_update(self):
+        super().c_update()

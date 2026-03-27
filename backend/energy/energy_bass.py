@@ -24,7 +24,7 @@ class EnergyBassDetector(AudioUpdatable):
         self.old_kick_energy_ratio = np.zeros(1)
         self.kick_energy_ratio = np.zeros(1)
 
-    def update(self):
+    def c_update(self):
         if self.avg_window_rms.data.item() == 0:
             return
 

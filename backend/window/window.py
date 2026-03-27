@@ -12,11 +12,14 @@ class Window(AudioUpdatable):
         self.data = np.repeat(init_value, length * input_data.shape[0]).reshape(length, input_data.shape[0])
         self.window_fcts = []
 
-    def update(self):
+    def c_update(self):
         self.roll()
         for window_fct in self.window_fcts:
             window_fct.aggregate(self.data)
 
     def roll(self):
+        if self.input_data.shape[0] != self.data.shape[1]:
+            pass
+            # self.data.reshape(self.length, self.input_data.shape[0])
         self.data[:] = np.roll(self.data, -1, axis=0)
         self.data[-1] = np.roll(self.input_data, self.offset)

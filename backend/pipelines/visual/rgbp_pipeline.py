@@ -13,7 +13,7 @@ class RGBPPipeline(VisualPipeline):
         self.output_rgb = np.zeros((FREQ_BINS, 3), dtype=np.float32)
         self.power_log = power_log
 
-    def update(self):
+    def c_update(self):
         rgb = self.rgb[:FREQ_BINS]
 
         self.output_rgb[:] = (

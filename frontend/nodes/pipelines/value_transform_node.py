@@ -22,12 +22,12 @@ class ValueTransformNode(Node):
             power=1.8,
         )
 
-    def process(self, data, display=True):
+    def c_update(self, data, display=True):
         del display
         if data is None:
             data = np.zeros(FREQ_BINS)
 
         self.input_data[:] = np.clip(np.asarray(data), 0, 1)
-        self.pipeline.update()
+        self.pipeline.c_update()
         return {"alpha": self.pipeline.output_value.copy()}
 

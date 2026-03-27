@@ -1,33 +1,37 @@
+from backend.updatable.updatable import AudioUpdatable
+
 import numpy as np
-from pyqtgraph.flowchart import Node
 
-from backend.pipelines.transforms.smoothing import SmoothingPipeline
-from config import FREQ_BINS
+from backend.window.window import Window
+from backend.windows_fcts.averaged_window_fct import AveragedWindowFct
+from frontend.nodes.cnode import CNode
 
 
-class SmoothingNode(Node):
+class SmoothingNode(CNode, AudioUpdatable):
     nodeName = "Smoothing"
 
-    def __init__(self, name, length=10, offset=0):
+    def __init__(
+            self,
+            input_value,
+            length,
+            avg_axis=None,
+            offset=0
+    ):
+        self.input_value = input_value
+        self.length = length
+        self.avg_axis = avg_axis
+
+        self.window = Window(input_data=self.input_value, length=length, offset=offset)
+        self.average_window = AveragedWindowFct(self.window, avg_axis=avg_axis)
+        self.data = np.zeros(self.average_window.data.shape[-1])
+
         terminals = {
-            "data": {"io": "in"},
-            "smoothed": {"io": "out"},
+            "input_value": {"io": "in"},
+            "data": {"io": "out"},
         }
-        super().__init__(name, terminals=terminals)
-        self.input_data = np.zeros(FREQ_BINS)
-        self.pipeline = SmoothingPipeline(
-            input_value=self.input_data,
-            length=length,
-            avg_axis=0,
-            offset=offset,
-        )
+        super().__init__(self.nodeName, terminals)
 
-    def process(self, data, display=True):
-        del display
-        if data is None:
-            data = np.zeros(FREQ_BINS)
-
-        self.input_data[:] = data
-        self.pipeline.update()
-        return {"smoothed": self.pipeline.data.copy()}
+    def c_update(self):
+        self.window.c_update()
+        self.data[...] = self.average_window.data
 

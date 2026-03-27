@@ -5,7 +5,7 @@ class AudioPipeline(AudioUpdatable):
     def __init__(self):
         super().__init__()
 
-    def update(self):
+    def c_update(self):
         pass
 
 
@@ -13,5 +13,5 @@ class VisualPipeline(VisualUpdatable):
     def __init__(self):
         super().__init__()
 
-    def update(self):
+    def c_update(self):
         pass

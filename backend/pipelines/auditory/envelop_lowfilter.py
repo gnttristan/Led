@@ -12,7 +12,7 @@ class EnvelopLowFilterPipeline(AudioPipeline):
         self.buffer_data = buffer_data
         self.data = np.zeros(1)
 
-    def update(self):
+    def c_update(self):
         filtered = self.apply_filter(self.buffer_data, SAMPLE_RATE)
         energy = np.mean(self.envelope(filtered))
         self.data[:] = energy

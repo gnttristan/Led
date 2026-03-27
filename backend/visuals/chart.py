@@ -12,5 +12,5 @@ class Chart(VisualUpdatable):
         win = pg.GraphicsLayoutWidget(title=self.title)
         return win
 
-    def update(self):
+    def c_update(self):
         pass

@@ -29,5 +29,5 @@ class Rainbow(VisualUpdatable):
         r, g, b = get_curve(tr), get_curve(tg), get_curve(tb)
         return np.stack((r, g, b), axis=1)
 
-    def update(self):
+    def c_update(self):
         pass

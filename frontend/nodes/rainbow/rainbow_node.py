@@ -11,8 +11,8 @@ class RainbowNode(Node):
         super().__init__(name, terminals=terminals)
         self.rainbow = GradiantRainbow()
 
-    def process(self, display=True):
+    def c_update(self, display=True):
         del display
-        self.rainbow.update()
+        self.rainbow.c_update()
         return {"rgb": self.rainbow.data.copy()}
 

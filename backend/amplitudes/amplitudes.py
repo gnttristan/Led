@@ -42,7 +42,7 @@ class Amplitudes(AudioUpdatable):
         self.normalisation = normalisation
         self.log = log
 
-    def update(self):
+    def c_update(self):
         self.buffer_to_amplitudes()
 
     def buffer_to_amplitudes(self):

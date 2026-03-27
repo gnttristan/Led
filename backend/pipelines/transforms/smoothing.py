@@ -22,6 +22,6 @@ class SmoothingPipeline(AudioPipeline):
         self.average_window = AveragedWindowFct(self.window, avg_axis=avg_axis)
         self.data = np.zeros(self.average_window.data.shape[-1])
 
-    def update(self):
-        self.window.update()
+    def c_update(self):
+        self.window.c_update()
         self.data[...] = self.average_window.data

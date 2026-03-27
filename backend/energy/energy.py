@@ -16,7 +16,7 @@ class TempoDetector(AudioUpdatable):
 
         self.energy = np.zeros(1)
 
-    def update(self):
+    def c_update(self):
         self.energy[:] = self.rms.data
 
 

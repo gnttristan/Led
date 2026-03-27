@@ -9,5 +9,5 @@ class OperatorPipeline(AudioPipeline):
         self.operation = operation
         self.data = np.array(self.operation(), copy=True)
 
-    def update(self):
+    def c_update(self):
         self.data[...] = self.operation()

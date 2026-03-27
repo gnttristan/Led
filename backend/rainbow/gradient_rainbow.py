@@ -13,8 +13,8 @@ class GradiantRainbow(Rainbow):
         super().__init__(inv_fraction)
         self.roll_speed = roll_speed
 
-    def update(self):
-        super().update()
+    def c_update(self):
+        super().c_update()
         self.roll_rainbow()
 
     def roll_rainbow(self):

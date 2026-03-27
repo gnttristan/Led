@@ -18,11 +18,11 @@ def audio_update(indata, frames, time, status):
     chunk_data[:] = indata.flatten()
 
     for obj in audio_updatable_objects:
-        obj.update()
+        obj.c_update()
 
 def visual_update():
     for obj in visual_updatable_objects:
-        obj.update()
+        obj.c_update()
 
 main_stream = Stream(callback=audio_update)
 

@@ -1,13 +1,11 @@
-from pyqtgraph.Qt import QtWidgets
-from frontend.components.sliders.slider import FSlider
+import math
 
-from backend.components.sliders import BExpSlider
+from frontend.components.sliders.linear_slider import LinearSlider
 
 
-class FExpSlider(QtWidgets.QWidget):
-    def __init__(self, b_exp_slider: BExpSlider):
-        super().__init__()
+class ExpSlider(LinearSlider):
+    def map_value(self, ratio):
+        return self.min_value * ((self.max_value / self.min_value) ** ratio)
 
-        self.slider = FSlider(b_exp_slider)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.slider)
+    def unmap_value(self, value):
+        return math.log(value / self.min_value) / math.log(self.max_value / self.min_value)

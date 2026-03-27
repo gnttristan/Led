@@ -40,7 +40,7 @@ class OutlierFrequenciesPipeline(AudioPipeline):
         self.alpha = np.zeros(self.input_amplitudes.shape[0])
 
 
-    def update(self):
+    def c_update(self):
         if self.average_level.data.item() == 0:
             return
 

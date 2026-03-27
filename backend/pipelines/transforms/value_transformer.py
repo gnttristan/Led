@@ -20,6 +20,6 @@ class ValueTransformerPipeline(AudioPipeline):
         self.output_value = np.zeros(self.input_value.shape[-1])
 
 
-    def update(self):
+    def c_update(self):
         self.input_value[:] = np.power(self.input_value, self.power)
         self.output_value[:] = np.interp(self.input_value, self.input_value_interval, self.output_value_interval)

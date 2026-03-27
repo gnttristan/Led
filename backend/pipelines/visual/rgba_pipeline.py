@@ -11,7 +11,7 @@ class RGBAPipeline(VisualPipeline):
         self.alpha = alpha
         self.rgba = np.zeros((FREQ_BINS, 4))
 
-    def update(self):
+    def c_update(self):
         rgb = self.rgb[:FREQ_BINS]
 
         self.rgba[:] = np.concatenate(
