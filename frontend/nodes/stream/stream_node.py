@@ -27,10 +27,7 @@ class StreamNode(CNode, AudioUpdatable):
         self._chunk_size_proxy_pending = False
 
     def callback(self, indata, frames, time, status):
-        if self.chunk.value.shape != indata.flatten().shape:
-            self.chunk.value = indata.flatten()
-        else:
-            self.chunk.value[:] = indata.flatten()
+        self.chunk.value[:] = indata.flatten()
         if self.user_callback is not None:
             self.user_callback(indata, frames, time, status)
 

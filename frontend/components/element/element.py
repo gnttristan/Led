@@ -29,12 +29,13 @@ class Element(QtWidgets.QWidget):
         element.node[element.name.lower()].connectTo(self.node[self.name.lower()])
 
     @staticmethod
-    def define_node_as_child(self, value):
+    def define_node_as_child(self):
         self.node.is_child = True
 
     def __init__(self, node, name, value):
         self.node = node
         self.name = name
+        self.value_label = None
 
         if isinstance(value, Element):
             self.value = value.value
@@ -42,7 +43,6 @@ class Element(QtWidgets.QWidget):
         else:
             if isinstance(value, CNode):
                 self.node.is_child = True
-                # QtCore.QTimer.singleShot(0, lambda: self.define_node_as_child(self, value))
             self.value = value
 
         if not node.render:
@@ -159,7 +159,12 @@ class Element(QtWidgets.QWidget):
         value_label.setText(self.format_value(value))
         value_label.setMinimumWidth(40)
         value_label.setFont(font)
+        self.value_label = value_label
         return value_label
+
+    def refresh_value_label(self):
+        if self.value_label is not None:
+            self.value_label.setText(self.format_value(self.value))
 
     def attach_terminal(self, title_offset, inner_margin):
         if self.terminal_placeholder is None:

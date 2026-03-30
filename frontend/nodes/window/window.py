@@ -20,7 +20,10 @@ class WindowNode(CNode, AudioUpdatable):
         self.length = ExpSlider(self, "length", 1, 1000, value=length)
         self.input_data = Element(self, "input_data", input_data) # Data to aggregate
         self.offset = Element(self, "offset", offset)
-        self.data = Element(self, "data", np.repeat(init_value, length * input_data.shape[0]).reshape(length, input_data.shape[0]))
+        self.data = Element(self, "data", (np
+            .repeat(init_value, self.length.value * input_data.shape[0])
+            .reshape(self.length.value, input_data.shape[0]))
+        )
         self.window_fcts = Element(self, "window_fcts", [])
 
     def c_update(self):

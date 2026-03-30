@@ -2,7 +2,6 @@ import sys
 
 import numpy as np
 from pyqtgraph.Qt import QtCore, QtWidgets
-from pyqtgraph.flowchart import Flowchart
 
 from backend.config import DELAY_UPDATE
 from frontend.nodes.pipelines.visual.rgba_pipeline import RGBAPipelineNode
@@ -13,10 +12,10 @@ from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
 from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
 from frontend.nodes.stream import StreamNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
+from frontend.overrides.CFlowchart import CFlowchart
 from frontend.registry.registry import register_nodes
 
 register_nodes()
-
 
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
@@ -59,7 +58,7 @@ def main():
     # ------------------------ ADD FLOWCHART NODES ------------------------
     # ---------------------------------------------------------------------
 
-    flowchart = Flowchart(
+    flowchart = CFlowchart(
         terminals={
             "amplitudes": {"io": "out"},
         }

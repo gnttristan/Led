@@ -33,10 +33,12 @@ class SmoothingNode(CNode, AudioUpdatable):
         self.window = Element(
             self,
             "window",
-            WindowNode(input_data=self.input_value.value, length=self.length.value, offset=offset)
+            WindowNode(input_data=self.input_value.value, length=self.length, offset=offset)
         )
         self.average_window = window_function(self.window.value, avg_axis=avg_axis)
         self.data = Element(self, "data", np.zeros(self.average_window.data.shape[-1]))
 
     def c_update(self):
+        print(self.length.value)
+        print(self.window.value.length.value)
         self.data.value[...] = self.average_window.data

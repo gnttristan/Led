@@ -8,7 +8,7 @@ class Slider(Element):
         super().__init__(node, name, value)
         self.min_value = min_value
         self.max_value = max_value
-        self.value = min_value if value is None else value
+        self.value = min_value if self.value is None else self.value
         self.steps = 1000
 
         if not node.render:
@@ -38,6 +38,7 @@ class Slider(Element):
     def set_from_ratio(self, ratio):
         ratio = min(max(ratio, 0), 1)
         self.value = self.map_value(ratio)
+        self.refresh_value_label()
 
     def set_from_slider(self, slider_value):
         self.set_from_ratio(slider_value / self.steps)
