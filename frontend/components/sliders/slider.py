@@ -1,36 +1,31 @@
 from pyqtgraph.Qt import QtCore, QtWidgets
 
+from frontend.components.element.element import Element
 
-class Slider(QtWidgets.QWidget):
-    def __init__(self, min_value, max_value, value=None, **kwargs):
-        super().__init__()
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
+class Slider(Element):
+    def __init__(self, node, name, min_value, max_value, value=None, **kwargs):
+        super().__init__(node, name, value)
         self.min_value = min_value
         self.max_value = max_value
         self.value = min_value if value is None else value
         self.steps = 1000
 
-        self.value_label = QtWidgets.QLabel("")
-        self.value_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.value_label.setStyleSheet("background: transparent;")
+        if not node.render:
+            return
+
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
         self.slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+        self.slider.setFixedWidth(100)
         self.slider.setContentsMargins(0, 0, 0, 0)
         self.slider.setRange(0, self.steps)
         self.slider.setValue(self.to_slider())
         self.slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
 
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(self.value_label)
-        layout.addWidget(self.slider)
-
         self.slider.valueChanged.connect(self.set_from_slider)
-        self.slider.valueChanged.connect(self._update_label)
-        self._update_label()
+
+        self.container_vchange_layout.addWidget(self.slider)
 
     def map_value(self, ratio):
         return self.min_value + (self.max_value - self.min_value) * ratio
@@ -55,6 +50,3 @@ class Slider(QtWidgets.QWidget):
         if isinstance(value, float):
             return f"{value:.4g}"
         return str(value)
-
-    def _update_label(self):
-        self.value_label.setText(self.format_value(self.value))
