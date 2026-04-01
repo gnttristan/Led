@@ -1,9 +1,9 @@
 import math
 
-from frontend.components.sliders.slider import Slider
+from frontend.components.dials.dial import Dial
 
 
-class ExpSlider(Slider):
+class ExpDial(Dial):
     def map_value(self, ratio):
         return self.min_value * ((self.max_value / self.min_value) ** ratio)
 

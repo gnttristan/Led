@@ -1,7 +1,7 @@
 import numpy as np
 
 from backend.pipelines.pipeline import VisualPipeline
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 from frontend.components.element.element import Element
 from frontend.components.element.element_value import ElementValue
 from frontend.nodes.cnode import CNode

@@ -1,7 +1,7 @@
 import numpy as np
 
 from backend.updatable.updatable import AudioUpdatable
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 
 class ExpandedAmplitudes(AudioUpdatable):
     def __init__(self, amplitudes, size=FREQ_BINS):

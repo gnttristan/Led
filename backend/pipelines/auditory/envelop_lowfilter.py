@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import hilbert, butter, lfilter
 
 from backend.pipelines.pipeline import AudioPipeline
-from backend.config import SAMPLE_RATE
+from config import SAMPLE_RATE
 from backend.energy.config import KICK_LOW_FREQT, KICK_HIGH_FREQT
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 
 
 def apply_amplitudes_rgb(rainbow_rgb, amplitudes_from_eq):

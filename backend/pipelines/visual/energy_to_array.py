@@ -1,7 +1,7 @@
 import numpy as np
 
 from backend.pipelines.pipeline import VisualPipeline
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 
 
 class EnergyToAlphaPipeline(VisualPipeline):

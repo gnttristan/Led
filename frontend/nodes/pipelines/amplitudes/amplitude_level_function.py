@@ -3,7 +3,7 @@ import numpy as np
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.element.element import Element
 from frontend.components.element.element_value import ElementValue
-from frontend.components.sliders import LinearSlider
+from frontend.components.dials import LinearDial
 from frontend.nodes.cnode import CNode
 
 
@@ -30,15 +30,15 @@ class AmplitudesLevelFunction(CNode, AudioUpdatable):
         self.arange = Element(self, "arange", ElementValue(np.arange(number_points)))
         self.data = Element(self, "data", ElementValue(np.zeros(number_points)), link_terminal=False)
 
-        self.offset = LinearSlider(self, "offset", 0.0, 1.5, offset)
+        self.offset = LinearDial(self, "offset", 0.0, 1.5, offset)
 
-        self.drop = LinearSlider(self, "drop", 0.0, 1.0, drop)
-        self.drop_center = LinearSlider(self, "drop_center", 0, number_points // 2, drop_center)
-        self.drop_width = LinearSlider(self, "drop_width", 1, max(10, number_points // 5), drop_width)
+        self.drop = LinearDial(self, "drop", 0.0, 1.0, drop)
+        self.drop_center = LinearDial(self, "drop_center", 0, number_points // 2, drop_center)
+        self.drop_width = LinearDial(self, "drop_width", 1, max(10, number_points // 5), drop_width)
 
-        self.rise = LinearSlider(self, "rise", 0.0, 0.5, rise)
-        self.rise_center = LinearSlider(self, "rise_center", number_points // 2, number_points, rise_center)
-        self.rise_width = LinearSlider(self, "rise_width", 1, max(10, number_points // 5), rise_width)
+        self.rise = LinearDial(self, "rise", 0.0, 0.5, rise)
+        self.rise_center = LinearDial(self, "rise_center", number_points // 2, number_points, rise_center)
+        self.rise_width = LinearDial(self, "rise_width", 1, max(10, number_points // 5), rise_width)
 
     def fct(self, amplitudes_data):
         self.data.value[:] = amplitudes_data * (

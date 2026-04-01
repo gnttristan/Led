@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import get_window
 
-from backend.config import FFT_SIZE, FREQ_BINS, MAX_FREQUENCY, MIN_FREQUENCY
+from config import FFT_SIZE, FREQ_BINS, MAX_FREQUENCY, MIN_FREQUENCY
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.element.element import Element
 from frontend.components.element.element_value import ElementValue

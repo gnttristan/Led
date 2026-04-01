@@ -1,2 +1,2 @@
-from frontend.nodes.stream.stream_node import StreamNode
+from frontend.nodes.stream.stream_mic_node import StreamMicNode
 

@@ -3,7 +3,7 @@ import numpy as np
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.element.element import Element
 from frontend.components.element.element_value import ElementValue
-from frontend.components.sliders import ExpSlider
+from frontend.components.dials import ExpDial
 from frontend.nodes.cnode import CNode
 
 
@@ -19,7 +19,7 @@ class WindowNode(CNode, AudioUpdatable):
         super().__init__(self.nodeName, terminals, render)
 
         self.flag_changing_shape = False
-        self.length = ExpSlider(self, "length", 1, 1000, ElementValue(length))
+        self.length = ExpDial(self, "length", 1, 1000, ElementValue(length))
         self.input_data = Element(self, "input_data", ElementValue(input_data)) # Data to aggregate
         self.offset = Element(self, "offset", ElementValue(offset))
         input_shape = self.input_data.value.shape[0]
@@ -29,7 +29,7 @@ class WindowNode(CNode, AudioUpdatable):
         ))
         self.window_fcts = Element(self, "window_fcts", ElementValue([]))
 
-        self.length.slider.valueChanged.connect(self.on_length_change)
+        self.length.dial.valueChanged.connect(self.on_length_change)
 
     def on_length_change(self):
         self.flag_changing_shape = True

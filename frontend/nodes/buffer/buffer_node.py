@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.config import CHUNK_SIZE, FFT_SIZE
+from config import CHUNK_SIZE, FFT_SIZE
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.element.element import Element
 from frontend.components.element.element_value import ElementValue

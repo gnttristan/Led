@@ -6,6 +6,7 @@ from pyqtgraph.Qt import QtWidgets
 from backend.pipelines.pipeline import AudioPipeline
 from frontend.components.element.element import Element
 from frontend.components.element.element_value import ElementValue
+from frontend.components.node_selector.node_selector import NodeSelector
 from frontend.components.textedit.textedit import TextEdit
 from frontend.nodes.cnode import CNode
 
@@ -38,16 +39,17 @@ class OperatorPipelineNode(CNode, AudioPipeline):
         self.operation_state_label.setAlignment(QtCore.Qt.AlignCenter)
         self.elements.append(self.operation_state_label)
 
-
-
-    def c_update(self):
+    def evaluate_arguments_callback(self):
         try:
-            self.data.value[...] = self.evaluate_arguments()
+            self.data.value[:] = self.evaluate_arguments()
             self.operation_state_label.setText(self.successMessage())
             self.operation_state_label.setStyleSheet("color: green;")
         except SyntaxError as e:
             self.operation_state_label.setText(self.errorMessage(e))
             self.operation_state_label.setStyleSheet("color: red;")
+
+    def c_update(self):
+        pass
 
     def resolve_element_name(self, arg):
         if isinstance(arg, Element):
@@ -89,10 +91,22 @@ class OperatorPipelineNode(CNode, AudioPipeline):
 
         for name, arg in zip(self.operation_element_names, arguments):
             if isinstance(arg, Element):
-                elements.append(Element(self, name, ElementValue(arg)))
+                element = NodeSelector(
+                    self,
+                    name,
+                    ElementValue(arg),
+                    selection_nodes=self.get_flowchart_visible_nodes
+                )
             elif isinstance(arg, str):
-                elements.append(TextEdit(self, name, ElementValue(arg)))
+                element = TextEdit(self, name, ElementValue(arg))
+                element.text_edit.textEdited.connect(self.evaluate_arguments_callback)
             else:
-                elements.append(TextEdit(self, name, ElementValue(str(arg))))
+                element = TextEdit(self, name, ElementValue(str(arg)))
+                element.text_edit.textEdited.connect(self.evaluate_arguments_callback)
+            setattr(self, name, element)
+            elements.append(element)
 
         return elements
+
+    def get_flowchart_visible_nodes(self):
+        return self.graphicsItem().getViewBox().widget.chart.visible_nodes

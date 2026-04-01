@@ -1,7 +1,7 @@
 import numpy as np
 
 from backend.updatable.updatable import VisualUpdatable
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 from backend.rainbow.config import RAINBOW_INV_FRACTION
 
 

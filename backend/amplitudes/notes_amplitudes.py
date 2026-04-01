@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import get_window
 
 from backend.updatable.updatable import AudioUpdatable
-from backend.config import *
+from config import *
 
 OUTBOUND_LOW_INDEX = 35
 OUTBOUND_HIGH_INDEX = 75
