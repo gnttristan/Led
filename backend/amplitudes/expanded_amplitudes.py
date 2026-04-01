@@ -1,7 +1,7 @@
 import numpy as np
 
 from backend.updatable.updatable import AudioUpdatable
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 
 class ExpandedAmplitudes(AudioUpdatable):
     def __init__(self, amplitudes, size=FREQ_BINS):
@@ -12,8 +12,8 @@ class ExpandedAmplitudes(AudioUpdatable):
         self.diff_indexes = np.hstack((self.groups_indexes[0], np.diff(self.groups_indexes)))
         self.data = np.zeros(size)
 
-    def update(self):
-        super().update()
+    def c_update(self):
+        super().c_update()
         self.data[:] = np.repeat(self.amplitudes, self.diff_indexes)
 
 

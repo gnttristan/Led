@@ -1,49 +1,89 @@
-from pyqtgraph.flowchart import Node
-from frontend.overrides.CTerminal import CTerminal
+from types import MethodType
 
-from backend.attributes.attribute import AttributeType
+from PyQt5 import QtGui, QtWidgets
+from pyqtgraph.Qt import QtCore
+from pyqtgraph.flowchart import Node
+
+from frontend.overrides.CTerminal import CTerminal
 
 
 class CNode(Node):
-    def __init__(self, obj, *args):
-        self.obj = obj(*args)
+    sig_initiated = QtCore.Signal()
+    INNER_MARGIN = 10
+    TERMINAL_WIDTH = 40
+    TITLE_OFFSET = 24
 
-        obj_attributes = self.obj.__dict__.items()
-        input_params = {
-            name: {"io": "in"} for name, attr in obj_attributes
-            if getattr(attr, "attr_type", None) == AttributeType.IN
-        }
-        output_params = {
-            name: {"io": "out"} for name, attr in self.obj.__dict__.items()
-            if getattr(attr, "attr_type", None) == AttributeType.OUT
-        }
+    def __init__(self, node_name, terminals, render=True):
+        self.node_name = node_name
+        self.render = render
+        self.elements = []
+        self.pending_terminals = dict(terminals)
+        self._elements_proxy = None
+        self._elements_container = None
+        self.is_child = False
+        self.is_initiated = False
 
-        self.input_params = tuple(input_params.keys())
-        self.output_params = tuple(output_params.keys())
-        terminals = input_params | output_params
-        super().__init__(obj.__name__, terminals=terminals)
+        if not render:
+            return
+
+        super().__init__(node_name)
+        QtCore.QTimer.singleShot(0, self.init_terminals)
+        QtCore.QTimer.singleShot(0, self.init_elements)
+
+    def init_terminals(self):
+        for name, opts in self.pending_terminals.items():
+            self.addTerminal(name, **opts)
+
+    def init_elements(self):
+        if self._elements_proxy is not None:
+            return
+
+        item = super().graphicsItem()
+        container = QtWidgets.QWidget()
+        container.setStyleSheet(f"background-color: {item.brush.color().name()};")
+        container.setStyleSheet("border: 1px solid #666;")
+        self._elements_container = container
+
+        elements_vbox = QtWidgets.QVBoxLayout(container)
+        elements_vbox.setContentsMargins(0, 0, 0, 0)
+        elements_vbox.setSpacing(0)
+
+        for element in self.elements:
+            elements_vbox.addWidget(element)
+
+        self._elements_proxy = QtWidgets.QGraphicsProxyWidget(item)
+        self._elements_proxy.setWidget(container)
+        self._elements_proxy.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, False)
+        self._elements_proxy.setPos(self.INNER_MARGIN, self.TITLE_OFFSET)
+
+        item.updateTerminals()
+        self.refresh_terminal_positions()
+
+    def refresh_parents_sizes(self):
+        if not self.render or self._elements_proxy is None or self._elements_container is None:
+            return
+
+        item = super().graphicsItem()
+        content_size = self._elements_container.size()
+        self._elements_proxy.resize(content_size.width(), content_size.height())
+        item.bounds.setWidth(content_size.width() + self.INNER_MARGIN * 2)
+        item.bounds.setHeight(self.TITLE_OFFSET + content_size.height() + self.INNER_MARGIN)
+        item.update()
+
+    def refresh_terminal_positions(self):
+        if not self.render or self._elements_proxy is None or self._elements_container is None:
+            return
+
+        self.refresh_parents_sizes()
+
+        for element in self.elements:
+            if hasattr(element, "attach_terminal"):
+                element.attach_terminal(self.TITLE_OFFSET, self.INNER_MARGIN)
 
     def addTerminal(self, name, **opts):
-        name = self.nextTerminalName(name)
-        term = CTerminal(self, name, **opts)
-        self.terminals[name] = term
-        if term.isInput():
-            self._inputs[name] = term
-        elif term.isOutput():
-            self._outputs[name] = term
-        self.graphicsItem().updateTerminals()
-        self.sigTerminalAdded.emit(self, term)
+        term = super().addTerminal(name, **opts)
+        term.connectTo = MethodType(CTerminal.connectTo, term)
         return term
 
-    def process(self, display=True, **kwargs):
-        for name in self.input_params:
-            value = kwargs.get(name)
-            if value is not None:
-                getattr(self.obj, name).value = value
-
-        self.obj.update()
-
-        return {
-            name: getattr(self.obj, name).value
-            for name in self.output_params
-        }
+    def c_update(self, **kwargs):
+        return {}

@@ -1,7 +1,7 @@
 import numpy as np
 
 from backend.updatable.updatable import VisualUpdatable
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 from backend.rainbow.config import RAINBOW_INV_FRACTION
 
 
@@ -29,5 +29,5 @@ class Rainbow(VisualUpdatable):
         r, g, b = get_curve(tr), get_curve(tg), get_curve(tb)
         return np.stack((r, g, b), axis=1)
 
-    def update(self):
+    def c_update(self):
         pass

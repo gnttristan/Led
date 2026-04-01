@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import get_window
 
 from backend.updatable.updatable import AudioUpdatable
-from backend.config import *
+from config import *
 
 OUTBOUND_LOW_INDEX = 35
 OUTBOUND_HIGH_INDEX = 75
@@ -35,7 +35,7 @@ class NotesAmplitudes(AudioUpdatable):
         self.normalisation = normalisation
         self.expand = expand
 
-    def update(self):
+    def c_update(self):
         self.buffer_to_amplitudes()
 
     def buffer_to_amplitudes(self):

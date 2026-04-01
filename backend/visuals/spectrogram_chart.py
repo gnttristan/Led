@@ -47,11 +47,11 @@ class SpectrogramChart(Chart):
 
         return win
 
-    def update(self):
+    def c_update(self):
         if self.spectrogram is None:
             raise Exception("Chart needs to be drawed")
 
-        super().update()
+        super().c_update()
 
         self.spectrogram.setOpts(brushes=self.brushes, height=self.data)
 

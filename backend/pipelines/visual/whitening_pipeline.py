@@ -12,7 +12,7 @@ class WhiteningPipeline(VisualPipeline):
         self.white_level = white_level
         self.white_level_fraction = white_level_fraction
 
-    def update(self):
+    def c_update(self):
         self.output_rgb[:] = np.clip(
             self.input_rgb + ((self.white_level * 255) * self.white_level_fraction),
             0,

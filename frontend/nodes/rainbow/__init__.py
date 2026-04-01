@@ -1,2 +1,2 @@
-from frontend.nodes.rainbow.rainbow_node import RainbowNode
+from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
 

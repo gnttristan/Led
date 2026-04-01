@@ -1,7 +1,7 @@
 import numpy as np
 
 from backend.pipelines.pipeline import VisualPipeline
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 
 
 class EnergyToAlphaPipeline(VisualPipeline):
@@ -10,7 +10,7 @@ class EnergyToAlphaPipeline(VisualPipeline):
         self.energy = energy
         self.alpha = np.zeros(FREQ_BINS)
 
-    def update(self):
+    def c_update(self):
         min_alpha = 0.5
         alpha = (min_alpha + (self.energy * (1 - min_alpha))) * 255
         self.alpha[:] = np.repeat(alpha, FREQ_BINS)

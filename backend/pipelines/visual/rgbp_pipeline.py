@@ -1,7 +1,7 @@
 import numpy as np
 
 from backend.pipelines.pipeline import VisualPipeline
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 
 POWER_LOG = 1
 
@@ -13,7 +13,7 @@ class RGBPPipeline(VisualPipeline):
         self.output_rgb = np.zeros((FREQ_BINS, 3), dtype=np.float32)
         self.power_log = power_log
 
-    def update(self):
+    def c_update(self):
         rgb = self.rgb[:FREQ_BINS]
 
         self.output_rgb[:] = (

@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import hilbert, butter, lfilter
 
 from backend.pipelines.pipeline import AudioPipeline
-from backend.config import SAMPLE_RATE
+from config import SAMPLE_RATE
 from backend.energy.config import KICK_LOW_FREQT, KICK_HIGH_FREQT
 
 
@@ -12,7 +12,7 @@ class EnvelopLowFilterPipeline(AudioPipeline):
         self.buffer_data = buffer_data
         self.data = np.zeros(1)
 
-    def update(self):
+    def c_update(self):
         filtered = self.apply_filter(self.buffer_data, SAMPLE_RATE)
         energy = np.mean(self.envelope(filtered))
         self.data[:] = energy
