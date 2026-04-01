@@ -1,9 +1,9 @@
 import math
 
-from frontend.components.sliders.linear_slider import LinearSlider
+from frontend.components.sliders.slider import Slider
 
 
-class ExpSlider(LinearSlider):
+class ExpSlider(Slider):
     def map_value(self, ratio):
         return self.min_value * ((self.max_value / self.min_value) ** ratio)
 

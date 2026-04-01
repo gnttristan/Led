@@ -3,10 +3,13 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from pyqtgraph.Qt import QtCore, QtWidgets
 
+from frontend.components.element.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 
 
 class Element(QtWidgets.QWidget):
+    valueChanged = QtCore.Signal(object)
+
     str_trsf = {
         str: lambda x: x,
         int: lambda x: str(x),
@@ -19,36 +22,50 @@ class Element(QtWidgets.QWidget):
 
     @classmethod
     def format_value(cls, value):
+        if isinstance(value, Element) or isinstance(value, ElementValue):
+            value = value.value
+        if isinstance(value, tuple):
+            return "(" + ", ".join(cls.format_value(v) for v in value) + ")"
+        if isinstance(value, list):
+            return "[" + ", ".join(cls.format_value(v) for v in value) + "]"
         for value_type, formatter in cls.str_trsf.items():
             if isinstance(value, value_type):
                 return formatter(value)
         return str(value)
 
     @staticmethod
-    def link_terminal(self, element):
+    def connect_terminal(self, element):
         element.node[element.name.lower()].connectTo(self.node[self.name.lower()])
 
     @staticmethod
     def define_node_as_child(self):
         self.node.is_child = True
 
-    def __init__(self, node, name, value):
+    def __init__(self, node, name, value, link_terminal=True):
         self.node = node
         self.name = name
+        self.link_terminal = link_terminal
         self.value_label = None
+        self._value = None
+        self._value_ref = None
+
+        super().__init__()
+
+        if isinstance(value, ElementValue):
+            self._value_ref = value
+            value = value.value
 
         if isinstance(value, Element):
             self.value = value.value
-            QtCore.QTimer.singleShot(0, lambda: self.link_terminal(self, value))
+            if self.link_terminal:
+                QtCore.QTimer.singleShot(0, lambda: self.connect_terminal(self, value))
         else:
             if isinstance(value, CNode):
                 self.node.is_child = True
-            self.value = value
+            self._value = value
 
         if not node.render:
             return
-
-        super().__init__()
 
         # HBox for elements
         self.hbox_elements = QtWidgets.QHBoxLayout()
@@ -79,6 +96,12 @@ class Element(QtWidgets.QWidget):
         self.hbox_elements.addWidget(self.build_value_widget(self.value, font))
         self.hbox_elements.addStretch()
 
+        ##!! toChange
+        if callable(getattr(self._value_ref, "_value", None)):
+            self._dynamic_label_timer = QtCore.QTimer(self)
+            self._dynamic_label_timer.timeout.connect(self.refresh_value_label)
+            self._dynamic_label_timer.start(250)
+
         # Element value widget change
         self.container_vchange = QtWidgets.QWidget()
         self.container_vchange.setMinimumWidth(100)
@@ -99,6 +122,21 @@ class Element(QtWidgets.QWidget):
         }.get(self.terminal_io)
 
         self.node.elements.append(self)
+
+    @property
+    def value(self):
+        if self._value_ref is not None:
+            return self._value_ref.value
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        self._value = value
+        if self._value_ref is not None:
+            if not callable(getattr(self._value_ref, "_value", None)):
+                self._value_ref.value = value
+        self.refresh_value_label()
+        self.valueChanged.emit(self.value)
 
     def build_value_widget(self, value, font):
         if isinstance(value, CNode):
@@ -157,7 +195,7 @@ class Element(QtWidgets.QWidget):
 
         value_label = QtWidgets.QLabel()
         value_label.setText(self.format_value(value))
-        value_label.setMinimumWidth(40)
+        value_label.setMinimumWidth(80)
         value_label.setFont(font)
         self.value_label = value_label
         return value_label

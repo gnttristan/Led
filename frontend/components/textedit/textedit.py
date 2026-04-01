@@ -11,6 +11,7 @@ class TextEdit(Element):
             return
 
         self.text_edit = QtWidgets.QLineEdit(str(self.value))
+        self.text_edit.setFixedWidth(100)
         self.text_edit.textEdited.connect(self.on_text_edited)
         self.container_vchange_layout.addWidget(self.text_edit)
 

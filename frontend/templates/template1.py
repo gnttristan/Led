@@ -3,11 +3,16 @@ import sys
 import numpy as np
 from pyqtgraph.Qt import QtCore, QtWidgets
 
+from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
 from backend.config import DELAY_UPDATE
+from frontend.nodes.pipelines.amplitudes.amplitude_transformer_node import AmplitudesTransformerNode
+from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
+from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual.rgba_pipeline import RGBAPipelineNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from backend.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct
 from frontend.nodes.buffer import BufferNode
+from frontend.nodes.cnode import CNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
 from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
 from frontend.nodes.stream import StreamNode
@@ -27,33 +32,81 @@ def main():
 
     stream_node = StreamNode(user_callback=audio_update)
     buffer_node = BufferNode(indata=stream_node.chunk)
+
     amplitudes_node = AmplitudesNode(
         buffer=buffer_node.data,
         powering=0.5,
         normalisation=True
     )
+
     smoothing_node = SmoothingNode(
         input_value=amplitudes_node.data,
-        length=100,
+        length=500,
         avg_axis=0,
         window_function=DecreasingAvgWindowFct
     )
 
+    new_amplitudes_node = OperatorPipelineNode(
+        arguments=[
+            amplitudes_node.data,
+            "-",
+            smoothing_node.data
+        ],
+        length=smoothing_node.data.value.shape[0]
+    )
+
+    new_amplitudes_node_normalized = ValueTransformerPipelineNode(
+        input_value=new_amplitudes_node.data,
+        output_value_interval=[0, 1],
+        power=4
+    )
+
+    amplitudes_and_smoothed_added = OperatorPipelineNode(
+        arguments=[
+            "(",
+            amplitudes_node.data,
+            "*",
+            0.4,
+            ")",
+            "+",
+            "(",
+            new_amplitudes_node_normalized.output_value,
+            "*",
+            0.6,
+            ")",
+        ],
+        length=new_amplitudes_node_normalized.output_value.value.shape[0]
+    )
+
+    amplitudes_level_function_node = AmplitudesLevelFunction(
+        number_points=amplitudes_and_smoothed_added.data.value.shape[0],
+        render=False
+    )
+
+    amplitudes_transformer_node = AmplitudesTransformerNode(
+        input_data=amplitudes_and_smoothed_added.data,
+        correlation_offset=0.1,
+        correlation_step=0.03,
+        amplitudes_level_fct=amplitudes_level_function_node,
+    )
+
     gradient_rainbow = GradiantRainbowNode()
+
     rgba_pipeline = RGBAPipelineNode(
         rgb=gradient_rainbow.data,
-        alpha=np.ones(smoothing_node.data.value.shape[-1]) * 255
+        alpha=lambda: amplitudes_transformer_node.data.value * 255
     )
+
     spectogram_chart_node = SpectrogramChartNode(
-        data=smoothing_node.data,
+        data=np.ones(amplitudes_transformer_node.data.value.shape[0]),
         title="Amplitudes",
-        number_points=smoothing_node.data.value.shape[0],
+        number_points=amplitudes_transformer_node.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
-        brushes=rgba_pipeline.rgba,
+        brushes=rgba_pipeline.rgba.value,
     )
-    chart_window = spectogram_chart_node.draw()
 
+    chart_window = spectogram_chart_node.draw()
 
     # ------------------------ ADD FLOWCHART NODES ------------------------
     # ---------------------------------------------------------------------
@@ -61,17 +114,12 @@ def main():
     flowchart = CFlowchart(
         terminals={
             "amplitudes": {"io": "out"},
-        }
+        },
+        nodes=list(filter(lambda x: isinstance(x, CNode), list(locals().values())))
     )
-    flowchart.inputNode.graphicsItem().hide()
 
-    flowchart.addNode(stream_node, "Stream", pos=(-400, 0))
-    flowchart.addNode(buffer_node, "Buffer", pos=(0, 0))
-    flowchart.addNode(amplitudes_node, "Amplitudes", pos=(400, 0))
-    flowchart.addNode(smoothing_node, "Smoothing", pos=(800, 0))
-    flowchart.addNode(gradient_rainbow, "GradiantRainbow", pos=(400, 400))
-    flowchart.addNode(rgba_pipeline, "RGBA", pos=(800, 400))
-    flowchart.addNode(spectogram_chart_node, "Window", pos=(1200, 200))
+    flowchart.inputNode.graphicsItem().hide()
+    flowchart.outputNode.graphicsItem().hide()
 
 
 

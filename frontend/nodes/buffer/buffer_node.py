@@ -3,6 +3,7 @@ import numpy as np
 from backend.config import CHUNK_SIZE, FFT_SIZE
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.element.element import Element
+from frontend.components.element.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 
 
@@ -16,10 +17,10 @@ class BufferNode(CNode, AudioUpdatable):
         }
         super().__init__(self.nodeName, terminals)
 
-        self.indata = Element(self, "indata", indata)
-        self.chunk_size = Element(self, "chunk_size", chunk_size)
-        self.length = Element(self, "length", length)
-        self.data = Element(self, "data", np.zeros(self.length.value))
+        self.indata = Element(self, "indata", ElementValue(indata))
+        self.chunk_size = Element(self, "chunk_size", ElementValue(chunk_size))
+        self.length = Element(self, "length", ElementValue(length))
+        self.data = Element(self, "data", ElementValue(np.zeros(self.length.value)))
 
     def c_update(self):
         self.roll()

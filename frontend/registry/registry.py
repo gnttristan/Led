@@ -1,5 +1,9 @@
 from pyqtgraph.flowchart import registerNodeType
 
+from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
+from frontend.nodes.pipelines.amplitudes.amplitude_transformer_node import AmplitudesTransformerNode
+from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
+from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.rainbow import GradiantRainbowNode
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
@@ -14,7 +18,11 @@ nodes = [
     WindowNode,
     SpectrogramChartNode,
     GradiantRainbowNode,
-    RGBAPipelineNode
+    RGBAPipelineNode,
+    ValueTransformerPipelineNode,
+    OperatorPipelineNode,
+    AmplitudesTransformerNode,
+    AmplitudesLevelFunction,
 ]
 
 def register_nodes():

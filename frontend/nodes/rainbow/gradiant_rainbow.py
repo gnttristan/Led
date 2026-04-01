@@ -3,6 +3,7 @@ import numpy as np
 from backend.rainbow.config import RAINBOW_INV_FRACTION, ROLL_SPEED
 from backend.rainbow.rainbow import Rainbow
 from frontend.components.element.element import Element
+from frontend.components.element.element_value import ElementValue
 from frontend.components.sliders import LinearSlider
 from frontend.nodes.cnode import CNode
 
@@ -23,7 +24,7 @@ class GradiantRainbowNode(Rainbow, CNode):
         self.inv_fraction = LinearSlider(self, "inv_fraction", 0, 1, inv_fraction)
         Rainbow.__init__(self, self.inv_fraction.value)
         self.roll_speed = LinearSlider(self, "roll_speed", 0, 10, roll_speed)
-        self.data = Element(self, "data", self.data)
+        self.data = Element(self, "data", ElementValue(self.data))
 
 
     def c_update(self):
@@ -32,5 +33,4 @@ class GradiantRainbowNode(Rainbow, CNode):
 
     def roll_rainbow(self):
         self.data.value[:] = np.roll(self.data.value, int(self.roll_speed.value), axis=0)
-
 

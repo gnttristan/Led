@@ -1,5 +1,6 @@
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.element.element import Element
+from frontend.components.element.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 from frontend.components.sliders.linear_slider import LinearSlider
 
@@ -18,10 +19,10 @@ class StreamNode(CNode, AudioUpdatable):
         super().__init__(self.nodeName, terminals)
 
         self.user_callback = user_callback
-        self.sample_rate = Element(self, "Sample rate", sample_rate)
+        self.sample_rate = Element(self, "Sample rate", ElementValue(sample_rate))
         self.chunk_size = LinearSlider(self, "Chunk size", 30, 70, value=chunk_size)
         self.chunk_size.slider.valueChanged.connect(self.on_chunk_size_changed)
-        self.chunk = Element(self, "Chunk", np.zeros(chunk_size))
+        self.chunk = Element(self, "Chunk", ElementValue(np.zeros(chunk_size)))
         self.sd_stream = None
         self._chunk_size_proxy = None
         self._chunk_size_proxy_pending = False

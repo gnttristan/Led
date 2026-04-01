@@ -42,4 +42,8 @@ class CTerminal(Terminal):
                 )
                 return None
 
+        if input_term.isConnected() and not input_term.connectedTo(output_term):
+            print(f"Terminal '{input_term.name()}' is already connected")
+            return None
+
         return Terminal.connectTo(self, term, connectionItem=connectionItem)

@@ -5,6 +5,7 @@ import numpy as np
 from backend.window.window import Window
 from backend.windows_fcts.averaged_window_fct import AveragedWindowFct
 from frontend.components.element.element import Element
+from frontend.components.element.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 from frontend.nodes.window.window import WindowNode
 
@@ -26,19 +27,18 @@ class SmoothingNode(CNode, AudioUpdatable):
         }
         super().__init__(self.nodeName, terminals)
 
-        self.input_value = Element(self, "input_value", input_value)
-        self.length = Element(self, "length", length)
+        self.input_value = Element(self, "input_value", ElementValue(input_value))
         self.avg_axis = avg_axis
 
+        self.length = ElementValue(length)
         self.window = Element(
             self,
             "window",
-            WindowNode(input_data=self.input_value.value, length=self.length, offset=offset)
+            ElementValue(WindowNode(input_data=self.input_value, length=self.length, offset=offset)),
         )
         self.average_window = window_function(self.window.value, avg_axis=avg_axis)
-        self.data = Element(self, "data", np.zeros(self.average_window.data.shape[-1]))
+        self.data = Element(self, "data", ElementValue(np.zeros(self.average_window.data.shape[-1])))
 
     def c_update(self):
-        print(self.length.value)
-        print(self.window.value.length.value)
-        self.data.value[...] = self.average_window.data
+        self.data.value[:] = self.average_window.data
+

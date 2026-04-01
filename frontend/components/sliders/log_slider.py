@@ -1,9 +1,9 @@
 import math
 
-from frontend.components.sliders.linear_slider import LinearSlider
+from frontend.components.sliders.slider import Slider
 
 
-class LogSlider(LinearSlider):
+class LogSlider(Slider):
     def map_value(self, ratio):
         min_log = math.log(self.min_value)
         max_log = math.log(self.max_value)

@@ -4,6 +4,7 @@ import pyqtgraph as pg
 
 from backend.visuals.chart import Chart
 from frontend.components.element.element import Element
+from frontend.components.element.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 
 
@@ -26,11 +27,11 @@ class SpectrogramChartNode(Chart, CNode):
         Chart.__init__(self, data, title)
         CNode.__init__(self, node_name=self.nodeName, terminals=terminals)
 
-        self.number_points = Element(self, "number_points", number_points)
-        self.brushes = Element(self, "brushes", brushes)
-        self.left_label = Element(self, "left_label", left_label)
-        self.bottom_label = Element(self, "bottom_label", bottom_label)
-        self.data = Element(self, "data", self.data)
+        self.number_points = Element(self, "number_points", ElementValue(number_points))
+        self.brushes = Element(self, "brushes", ElementValue(brushes))
+        self.left_label = Element(self, "left_label", ElementValue(left_label))
+        self.bottom_label = Element(self, "bottom_label", ElementValue(bottom_label))
+        self.data = Element(self, "data", ElementValue(self.data))
         self.spectrogram = None
 
     def draw(self):

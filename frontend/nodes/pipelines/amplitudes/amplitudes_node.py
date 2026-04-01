@@ -4,6 +4,7 @@ from scipy.signal import get_window
 from backend.config import FFT_SIZE, FREQ_BINS, MAX_FREQUENCY, MIN_FREQUENCY
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.element.element import Element
+from frontend.components.element.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 
 class AmplitudesNode(CNode, AudioUpdatable):
@@ -25,19 +26,19 @@ class AmplitudesNode(CNode, AudioUpdatable):
         }
         super().__init__(self.nodeName, terminals)
 
-        self.freq_bins = Element(self, "freq_bins", freq_bins)
-        self.buffer = Element(self, "buffer", buffer)
-        self.fft_size = Element(self, "fft_size", fft_size)
+        self.freq_bins = Element(self, "freq_bins", ElementValue(freq_bins))
+        self.buffer = Element(self, "buffer", ElementValue(buffer))
+        self.fft_size = Element(self, "fft_size", ElementValue(fft_size))
         self.window = get_window('hann', self.fft_size.value)
-        self.min_frequency = Element(self, "min_frequency", min_frequency)
-        self.max_frequency = Element(self, "max_frequency", max_frequency)
+        self.min_frequency = Element(self, "min_frequency", ElementValue(min_frequency))
+        self.max_frequency = Element(self, "max_frequency", ElementValue(max_frequency))
         self.frequencies = Element(
-            self, "frequencies", np.geomspace(self.min_frequency.value, self.max_frequency.value, self.freq_bins.value)
+            self, "frequencies", ElementValue(np.geomspace(self.min_frequency.value, self.max_frequency.value, self.freq_bins.value))
         )
         self.bins = self.freq_to_bin(self.frequencies.value, self.fft_size.value)
         self.powering = powering
-        self.data = Element(self, "data", np.zeros(self.freq_bins.value))
-        self.normalisation = Element(self, "normalisation", normalisation)
+        self.data = Element(self, "data", ElementValue(np.zeros(self.freq_bins.value)))
+        self.normalisation = Element(self, "normalisation", ElementValue(normalisation))
 
     def c_update(self):
         self.buffer_to_amplitudes()
@@ -56,6 +57,7 @@ class AmplitudesNode(CNode, AudioUpdatable):
             )
 
         self.data.value[:] = updated_amplitudes
+
 
     def freq_to_bin(self, frequencies, fft_size):
         return np.round(frequencies / self.max_frequency.value * (fft_size / 2)).astype(int)
