@@ -14,8 +14,8 @@ from backend.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFc
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.cnode import CNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
+from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
-from frontend.nodes.stream import StreamMicNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.registry.registry import register_nodes
@@ -25,13 +25,8 @@ register_nodes()
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    def audio_update(indata, frames, time, status):
-        del indata, frames, time, status
-        for obj in audio_updatable_objects:
-            obj.c_update()
-
-    stream_mic_node = StreamMicNode(user_callback=audio_update)
-    buffer_node = BufferNode(indata=stream_mic_node.chunk)
+    sc_playlist_player_node = SCPlaylistPlayer()
+    buffer_node = BufferNode(indata=sc_playlist_player_node.chunk)
 
     amplitudes_node = AmplitudesNode(
         buffer=buffer_node.data,
@@ -130,16 +125,18 @@ def main():
     graph_window.show()
 
     def visual_update():
+        for obj in audio_updatable_objects:
+            obj.c_update()
         for obj in visual_updatable_objects:
             obj.c_update()
 
-    stream_mic_node.start()
+    sc_playlist_player_node.start()
 
     timer = QtCore.QTimer()
     timer.timeout.connect(visual_update)
     timer.start(DELAY_UPDATE)
 
-    app.aboutToQuit.connect(stream_mic_node.stop)
+    app.aboutToQuit.connect(sc_playlist_player_node.stop)
     sys.exit(app.exec_())
 
 
