@@ -54,6 +54,8 @@ class CNode(Node):
         self._elements_proxy = QtWidgets.QGraphicsProxyWidget(item)
         self._elements_proxy.setWidget(container)
         self._elements_proxy.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, False)
+        self._elements_proxy.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsPanel, True)
+        self._elements_proxy.setZValue(1)
         self._elements_proxy.setPos(self.INNER_MARGIN, self.TITLE_OFFSET)
 
         item.updateTerminals()
@@ -64,7 +66,8 @@ class CNode(Node):
             return
 
         item = super().graphicsItem()
-        content_size = self._elements_container.size()
+        self._elements_container.adjustSize()
+        content_size = self._elements_container.sizeHint()
         self._elements_proxy.resize(content_size.width(), content_size.height())
         item.bounds.setWidth(content_size.width() + self.INNER_MARGIN * 2)
         item.bounds.setHeight(self.TITLE_OFFSET + content_size.height() + self.INNER_MARGIN)

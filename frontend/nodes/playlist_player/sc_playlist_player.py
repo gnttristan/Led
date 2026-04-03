@@ -1,34 +1,62 @@
 import os
+import pickle
 import tempfile
 import threading
-import time
+import hashlib
+from urllib.parse import unquote, urlparse
 
 import numpy as np
 import soundfile as sf
 from yt_dlp import YoutubeDL
+from pyqtgraph.Qt import QtCore
 
 from backend.updatable.updatable import AudioUpdatable
+from config import SAMPLE_RATE
 from frontend.components.element.element import Element
 from frontend.components.element.element_value import ElementValue
+from frontend.components.player.playlist_player import PlaylistPlayer
 from frontend.components.textedit.textedit import TextEdit
 from frontend.nodes.cnode import CNode
-from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 
 
 class SCPlaylistPlayer(CNode, AudioUpdatable):
     nodeName = "SCPlaylistPlayer"
+    entries_cache_path = os.path.expanduser("~/.cache/led/sc_playlist_entries.pkl")
+    metadataReady = QtCore.Signal(object)
+    trackLoaded = QtCore.Signal(int)
 
-    def __init__(self, playlist_url="", browser="chrome", profile="Default", prefetch_seconds=10, render=True):
-        super().__init__(self.nodeName, {"chunk": {"io": "out"}}, render=render)
+    def __init__(self,
+             playlist_url="https://soundcloud.com/trg-electro/sets/led",
+             browser="chrome", profile="Default", prefetch_seconds=10, render=True
+        ):
+        super().__init__(
+            self.nodeName,
+            {"audio": {"io": "out"}, "sample_rate": {"io": "out"}, "enqueue_token": {"io": "out"}},
+            render=render,
+        )
         self.playlist_url = TextEdit(self, "playlist_url", ElementValue(playlist_url))
         self.browser = TextEdit(self, "browser", ElementValue(browser))
         self.profile = TextEdit(self, "profile", ElementValue(profile))
         self.prefetch_seconds = Element(self, "prefetch_seconds", ElementValue(float(prefetch_seconds)))
-        self.chunk = Element(self, "chunk", ElementValue(np.zeros(1024, dtype=np.float32)))
+        self.audio = Element(self, "audio", ElementValue(np.zeros((0, 2), dtype=np.float32)))
+        self.sample_rate = Element(self, "sample_rate", ElementValue(0))
+        self.enqueue_token = Element(self, "enqueue_token", ElementValue(0))
+        self.playlist_player = PlaylistPlayer([])
+        self.elements.append(self.playlist_player)
 
-        self.stream_player = StreamPlayerNode(render=False)
+        self.playlist_player.playRequested.connect(self.on_play_requested)
+        self.playlist_player.pauseRequested.connect(self.on_pause_requested)
+        self.playlist_player.seekRequested.connect(self.on_seek_requested)
+        self.metadataReady.connect(self.on_metadata_ready)
+        self.trackLoaded.connect(self.on_track_loaded)
+
         self._thread = None
         self._stop_event = threading.Event()
+        self._data_lock = threading.Lock()
+        self._tracks = []
+        self._seek_ratios = []
+        self._current_track_index = -1
+        self._is_playing = False
 
         if playlist_url:
             self.start()
@@ -43,61 +71,128 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
 
     @staticmethod
     def _extract_entries(url, opts):
+        key_raw = f"{url}|{repr(sorted(opts.items()))}"
+        cache_key = hashlib.sha256(key_raw.encode("utf-8")).hexdigest()
+        cache = {}
+        try:
+            with open(SCPlaylistPlayer.entries_cache_path, "rb") as f:
+                cache = pickle.load(f)
+        except Exception:
+            cache = {}
+        if cache_key in cache:
+            return cache[cache_key]
+
         playlist_opts = dict(opts)
         playlist_opts["extract_flat"] = "in_playlist"
         playlist_opts["lazy_playlist"] = True
         with YoutubeDL(playlist_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-        return info.get("entries", [])
+        entries = info.get("entries", [])
+
+        cache[cache_key] = entries
+        try:
+            os.makedirs(os.path.dirname(SCPlaylistPlayer.entries_cache_path), exist_ok=True)
+            with open(SCPlaylistPlayer.entries_cache_path, "wb") as f:
+                pickle.dump(cache, f)
+        except Exception:
+            pass
+
+        return entries
 
     @staticmethod
     def _download_track(entry, opts):
-        track_url = entry.get("webpage_url") or entry.get("url")
-        if not track_url:
-            return None
+        track_url = entry.get("url")
         with tempfile.TemporaryDirectory() as tmp:
             dl_opts = dict(opts)
             dl_opts["outtmpl"] = os.path.join(tmp, "track.%(ext)s")
             dl_opts["postprocessors"] = [{"key": "FFmpegExtractAudio", "preferredcodec": "wav", "preferredquality": "0"}]
+            dl_opts["postprocessor_args"] = ["-ar", str(SAMPLE_RATE), "-ac", "2"]
             YoutubeDL(dl_opts).download([track_url])
             wav_path = os.path.join(tmp, "track.wav")
-            if not os.path.exists(wav_path):
-                return None
             audio, sr = sf.read(wav_path)
             return audio, sr
 
+    @staticmethod
+    def _slug_to_text(value):
+        return unquote((value or "").replace("-", " "))
+
+    @classmethod
+    def _entry_metadata(cls, entry):
+        track_url = entry.get("url", "")
+        parts = [p for p in urlparse(track_url).path.split("/") if p]
+        artist_from_url = cls._slug_to_text(parts[0]) if len(parts) > 0 else ""
+        title_from_url = cls._slug_to_text(parts[1]) if len(parts) > 1 else ""
+        duration = entry.get("duration")
+        return {
+            "artist": artist_from_url,
+            "title": title_from_url,
+            "duration": float(duration) if duration else 0.0,
+        }
+
     def _worker(self):
         url = str(self.playlist_url.value).strip()
-        if not url:
-            return
         opts = self._ydl_opts()
         entries = self._extract_entries(url, opts)
-        if not entries:
+        metadata = [self._entry_metadata(entry) for entry in entries]
+        with self._data_lock:
+            self._tracks = [None] * len(entries)
+            self._seek_ratios = [0.0] * len(entries)
+        self.metadataReady.emit(metadata)
+
+        for idx, entry in enumerate(entries):
+            if self._stop_event.is_set():
+                break
+            n_audio, n_sr = self._download_track(entry, opts)
+            arr = np.asarray(n_audio, dtype=np.float32)
+            arr = arr[:, None] if arr.ndim == 1 else arr
+            with self._data_lock:
+                self._tracks[idx] = (arr, int(n_sr))
+            self.trackLoaded.emit(idx)
+
+    def on_track_loaded(self, index):
+        self.playlist_player.set_loaded(index, True)
+        self._refresh_node_ui_geometry()
+
+    def on_metadata_ready(self, metadata):
+        self.playlist_player.set_playlist_metadata(metadata)
+        self._refresh_node_ui_geometry()
+
+    def _refresh_node_ui_geometry(self):
+        self.playlist_player.adjustSize()
+        self.refresh_terminal_positions()
+
+    def on_play_requested(self, index):
+        with self._data_lock:
+            track = self._tracks[index]
+            ratio = self._seek_ratios[index]
+            self._current_track_index = index
+        if track is None:
             return
+        audio, sr = track
+        start = int(ratio * audio.shape[0])
+        self.audio.value = audio[start:]
+        self.sample_rate.value = int(sr)
+        self.enqueue_token.value = int(self.enqueue_token.value) + 1
+        self._is_playing = True
 
-        idx = 0
-        first = self._download_track(entries[idx], opts)
-        while first is None and idx + 1 < len(entries):
-            idx += 1
-            first = self._download_track(entries[idx], opts)
-        if first is None:
+    def on_pause_requested(self, index):
+        if index != self._current_track_index:
             return
+        self.audio.value = np.zeros((0, 2), dtype=np.float32)
+        self.enqueue_token.value = int(self.enqueue_token.value) + 1
+        self._is_playing = False
 
-        audio, sr = first
-        self.stream_player.enqueue(audio, sr)
-        self.stream_player.start()
-        idx += 1
-
-        while not self._stop_event.is_set() and idx < len(entries):
-            remaining = self.stream_player.remaining_seconds_to_song_end()
-            if remaining is not None and remaining <= float(self.prefetch_seconds.value):
-                nxt = self._download_track(entries[idx], opts)
-                if nxt is not None:
-                    naudio, nsr = nxt
-                    self.stream_player.enqueue(naudio, nsr)
-                idx += 1
-            else:
-                time.sleep(0.1)
+    def on_seek_requested(self, index, ratio):
+        with self._data_lock:
+            self._seek_ratios[index] = float(ratio)
+            track = self._tracks[index]
+        if index != self._current_track_index or not self._is_playing or track is None:
+            return
+        audio, sr = track
+        start = int(float(ratio) * audio.shape[0])
+        self.audio.value = audio[start:]
+        self.sample_rate.value = int(sr)
+        self.enqueue_token.value = int(self.enqueue_token.value) + 1
 
     def start(self):
         if self._thread is not None and self._thread.is_alive():
@@ -108,10 +203,9 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
 
     def stop(self):
         self._stop_event.set()
-        self.stream_player.stop()
+        self.audio.value = np.zeros((0, 2), dtype=np.float32)
+        self.enqueue_token.value = int(self.enqueue_token.value) + 1
+        self._is_playing = False
 
     def c_update(self):
-        if self.chunk.value.shape[0] != self.stream_player.chunk.value.shape[0]:
-            self.chunk.value = np.zeros_like(self.stream_player.chunk.value)
-        self.chunk.value[:] = self.stream_player.chunk.value
-        return self.chunk
+        return self.audio

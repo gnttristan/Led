@@ -2,7 +2,6 @@ from backend.updatable.updatable import AudioUpdatable
 
 import numpy as np
 
-from backend.window.window import Window
 from backend.windows_fcts.averaged_window_fct import AveragedWindowFct
 from frontend.components.element.element import Element
 from frontend.components.element.element_value import ElementValue

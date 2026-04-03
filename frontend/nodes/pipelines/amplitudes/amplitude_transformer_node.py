@@ -51,7 +51,7 @@ class AmplitudesTransformerNode(CNode, AudioUpdatable):
                 mode="same"
             )
             
-        if self.amplitudes_level_fct is not None:
+        if self.amplitudes_level_fct.value is not None:
             updated_amplitudes = self.amplitudes_level_fct.value.fct(updated_amplitudes)
 
         self.data.value[:] = updated_amplitudes

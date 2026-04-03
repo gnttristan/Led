@@ -29,6 +29,8 @@ class OperatorPipelineNode(CNode, AudioPipeline):
         super().__init__(node_name=self.nodeName, terminals=self.terminals_dict.copy())
 
         self.operation_elements = self.define_operation_elements(arguments)
+        self.built_evaluation = None
+        self.build_evaluation_arguments()
 
         self.data = Element(self, "data", ElementValue(np.zeros(length)))
 
@@ -39,9 +41,9 @@ class OperatorPipelineNode(CNode, AudioPipeline):
         self.operation_state_label.setAlignment(QtCore.Qt.AlignCenter)
         self.elements.append(self.operation_state_label)
 
-    def evaluate_arguments_callback(self):
+    def build_evaluation_arguments_callback(self):
         try:
-            self.data.value[:] = self.evaluate_arguments()
+            self.build_evaluation_arguments()
             self.operation_state_label.setText(self.successMessage())
             self.operation_state_label.setStyleSheet("color: green;")
         except SyntaxError as e:
@@ -49,7 +51,9 @@ class OperatorPipelineNode(CNode, AudioPipeline):
             self.operation_state_label.setStyleSheet("color: red;")
 
     def c_update(self):
-        pass
+        ##!! When the element argument is being edited, we should skip here
+        self.build_evaluation_arguments()
+        self.data.value[:] = self.evaluate_arguments()
 
     def resolve_element_name(self, arg):
         if isinstance(arg, Element):
@@ -67,12 +71,16 @@ class OperatorPipelineNode(CNode, AudioPipeline):
             )})"
         return str(token)
 
-    def evaluate_arguments(self):
+    def build_evaluation_arguments(self):
         expression = []
 
         for element in self.operation_elements:
             expression.append(self.resolve_token(element.value))
-        return eval(" ".join(expression))
+        self.built_evaluation = " ".join(expression)
+
+
+    def evaluate_arguments(self):
+        return eval(self.built_evaluation)
 
     def update_terminal(self):
         args_elements_indexes = list(map(
@@ -99,10 +107,10 @@ class OperatorPipelineNode(CNode, AudioPipeline):
                 )
             elif isinstance(arg, str):
                 element = TextEdit(self, name, ElementValue(arg))
-                element.text_edit.textEdited.connect(self.evaluate_arguments_callback)
+                element.text_edit.textEdited.connect(self.build_evaluation_arguments_callback)
             else:
                 element = TextEdit(self, name, ElementValue(str(arg)))
-                element.text_edit.textEdited.connect(self.evaluate_arguments_callback)
+                element.text_edit.textEdited.connect(self.build_evaluation_arguments_callback)
             setattr(self, name, element)
             elements.append(element)
 

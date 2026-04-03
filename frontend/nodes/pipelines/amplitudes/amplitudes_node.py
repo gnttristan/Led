@@ -17,7 +17,7 @@ class AmplitudesNode(CNode, AudioUpdatable):
             max_frequency=MAX_FREQUENCY,
             fft_size=FFT_SIZE,
             freq_bins=FREQ_BINS,
-            powering=1,
+            powering=0,
             normalisation=True,
     ):
         terminals = {

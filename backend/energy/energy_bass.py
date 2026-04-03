@@ -3,7 +3,6 @@ import numpy as np
 from backend.pipelines.auditory.envelop_lowfilter import EnvelopLowFilterPipeline
 from backend.pipelines.auditory.rms import RMSPipeline
 from backend.updatable.updatable import AudioUpdatable
-from backend.window.window import Window
 from backend.windows_fcts.averaged_window_fct import AveragedWindowFct
 
 

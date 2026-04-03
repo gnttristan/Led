@@ -9,7 +9,7 @@ class CFlowchart(Flowchart):
         self.inputNode.graphicsItem().hide()
         self.outputNode.graphicsItem().hide()
 
-        self.viewBox.sigRangeChanged.connect(self.on_view_range_changed)
+        # self.viewBox.sigRangeChanged.connect(self.on_view_range_changed)
         self.add_nodes(nodes or [])
         self.visible_nodes = self.get_visible_nodes()
         ##!! change with visible nodes
