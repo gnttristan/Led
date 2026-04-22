@@ -1,14 +1,20 @@
-from pyqtgraph.Qt import QtCore, QtWidgets
+from typing import Sequence
 
-from frontend.components.player.music_player import MusicPlayer
+from PyQt5 import QtCore, QtWidgets
+
+from frontend.components.elements.player.music_player import MusicPlayer
 
 
 class PlaylistPlayer(QtWidgets.QWidget):
-    playRequested = QtCore.Signal(int)
-    pauseRequested = QtCore.Signal(int)
-    seekRequested = QtCore.Signal(int, float)
+    playRequested = QtCore.pyqtSignal(int)
+    pauseRequested = QtCore.pyqtSignal(int)
+    seekRequested = QtCore.pyqtSignal(int, float)
 
-    def __init__(self, playlist_metadata=None, parent=None):
+    def __init__(
+        self,
+        playlist_metadata: Sequence[dict[str, object]] | None = None,
+        parent: QtWidgets.QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setFixedWidth(300)
         self.music_players = []

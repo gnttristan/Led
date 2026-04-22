@@ -1,7 +1,7 @@
 import sys
 
 import numpy as np
-from pyqtgraph.Qt import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
 from config import DELAY_UPDATE, SAMPLE_RATE
@@ -10,7 +10,6 @@ from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNo
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual.rgba_pipeline import RGBAPipelineNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
-from backend.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.cnode import CNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
@@ -93,27 +92,35 @@ def main():
     #     render = False
     # )
     #
-    # amplitudes_transformer_node = AmplitudesTransformerNode(
-    #     input_data=amplitudes_and_smoothed_added.data,
-    #     # correlation_offset=0.1,
-    #     # correlation_step=0.03,
-    #     # amplitudes_level_fct=amplitudes_level_function_node,
-    # )
+    amplitudes_transformer_node = AmplitudesTransformerNode(
+        input_data=amplitudes_node.data,
+        correlation_offset=0.1,
+        correlation_step=0.03,
+        # amplitudes_level_fct=amplitudes_level_function_node,
+    )
+
+    amplitudes_node_normalized = ValueTransformerPipelineNode(
+        input_value=amplitudes_transformer_node.data,
+        output_value_interval=[0, 1],
+        power=4
+    )
 
     gradient_rainbow = GradiantRainbowNode()
 
     rgba_pipeline = RGBAPipelineNode(
         rgb=gradient_rainbow.data,
-        alpha=lambda: np.ones(amplitudes_node.data.value.shape[0]) * 255
+        alpha=lambda: amplitudes_node_normalized.output_value.value * 255
     )
 
     spectogram_chart_node = SpectrogramChartNode(
-        data=amplitudes_node.data.value,
+        data=np.ones(amplitudes_node.data.value.shape[0]),
         title="Amplitudes",
         number_points=amplitudes_node.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
         brushes=rgba_pipeline.rgba,
+        y_min=0,
+        y_max=1,
     )
 
     chart_window = spectogram_chart_node.draw()
@@ -140,6 +147,8 @@ def main():
     graph_window.show()
 
     def visual_update():
+        if flowchart.should_pause_updates():
+            return
         for obj in audio_updatable_objects:
             obj.c_update()
         for obj in visual_updatable_objects:

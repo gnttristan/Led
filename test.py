@@ -13,7 +13,7 @@ def sc_playlist_arrays(url, ydl_opts):
     playlist_opts["extract_flat"] = "in_playlist"  # key fix
     playlist_opts["lazy_playlist"] = True  # optional, lower burst calls
     with YoutubeDL(playlist_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
+        info = ydl.extract_info(url, download=True)
     return info.get("entries", [])
 
 def sc_song_array(_ydl, ydl_opts, entry):

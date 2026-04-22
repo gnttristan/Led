@@ -9,5 +9,4 @@ crcmod
 pandas
 pyqtgraph
 PyQt5
-
-python-qt5
+pyqt-switch

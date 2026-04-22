@@ -1,5 +1,5 @@
 class ElementValue:
-    def __init__(self, value):
+    def __init__(self, value: object) -> None:
         self._value = None
         self.value = value
 

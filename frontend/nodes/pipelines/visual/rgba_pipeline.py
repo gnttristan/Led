@@ -2,22 +2,27 @@ import numpy as np
 
 from backend.pipelines.pipeline import VisualPipeline
 from config import FREQ_BINS
-from frontend.components.element.element import Element
-from frontend.components.element.element_value import ElementValue
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 
 
 class RGBAPipelineNode(VisualPipeline, CNode):
     nodeName = "RGBAPipeline"
 
-    def __init__(self, rgb, alpha):
+    def __init__(
+        self,
+        rgb: np.ndarray = np.zeros(0),
+        alpha: np.ndarray = np.zeros(0),
+        render: bool = True,
+    ) -> None:
         terminals = {
             "rgb": {"io": "in"},
             "alpha": {"io": "in"},
             "rgba": {"io": "out"},
         }
         VisualPipeline.__init__(self)
-        CNode.__init__(self, node_name=self.nodeName, terminals=terminals)
+        CNode.__init__(self, node_name=self.nodeName, terminals=terminals, render=render)
 
         self.rgb = Element(self, "rgb", ElementValue(rgb))
         self.alpha = Element(self, "alpha", ElementValue(alpha))

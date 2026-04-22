@@ -1,12 +1,13 @@
 import threading
+from typing import Callable
 
 import numpy as np
 import sounddevice as sd
 
 from config import CHUNK_SIZE, SAMPLE_RATE
 from backend.updatable.updatable import AudioUpdatable
-from frontend.components.element.element import Element
-from frontend.components.element.element_value import ElementValue
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 
 
@@ -15,14 +16,14 @@ class StreamPlayerNode(CNode, AudioUpdatable):
 
     def __init__(
         self,
-        audio_in=np.zeros((0, 2), dtype=np.float32),
-        sample_rate_in=SAMPLE_RATE,
-        enqueue_token=0,
-        sample_rate=SAMPLE_RATE,
-        chunk_size=CHUNK_SIZE,
-        render=True,
-        user_callback=None
-    ):
+        audio_in: np.ndarray = np.zeros((0, 2), dtype=np.float32),
+        sample_rate_in: int = SAMPLE_RATE,
+        enqueue_token: int = 0,
+        sample_rate: int = SAMPLE_RATE,
+        chunk_size: int = CHUNK_SIZE,
+        render: bool = True,
+        user_callback: Callable[[np.ndarray, int, object, object], None] | None = None
+    ) -> None:
         terminals = {
             "audio_in": {"io": "in"},
             "sample_rate_in": {"io": "in"},

@@ -1,7 +1,7 @@
 import sys
 
 import numpy as np
-from pyqtgraph.Qt import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
 from config import DELAY_UPDATE, SAMPLE_RATE
@@ -10,7 +10,6 @@ from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNo
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual.rgba_pipeline import RGBAPipelineNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
-from backend.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.cnode import CNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
@@ -37,7 +36,7 @@ def main():
 
     amplitudes_node = AmplitudesNode(
         buffer=buffer_node.data,
-        # powering=0.5,
+        powering=-0.2,
         normalisation=True
     )
     #
@@ -100,12 +99,14 @@ def main():
     )
 
     spectogram_chart_node = SpectrogramChartNode(
-        data=amplitudes_node.data.value,
+        data=amplitudes_node.data,
         title="Amplitudes",
         number_points=amplitudes_node.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
         brushes=rgba_pipeline.rgba,
+        y_min=0,
+        y_max=1,
     )
 
     chart_window = spectogram_chart_node.draw()
@@ -132,8 +133,6 @@ def main():
     graph_window.show()
 
     def visual_update():
-        for obj in audio_updatable_objects:
-            obj.c_update()
         for obj in visual_updatable_objects:
             obj.c_update()
 
@@ -143,6 +142,7 @@ def main():
     timer.timeout.connect(visual_update)
     timer.start(DELAY_UPDATE)
 
+    app.aboutToQuit.connect(stream_mic_node.stop)
     sys.exit(app.exec_())
 
 

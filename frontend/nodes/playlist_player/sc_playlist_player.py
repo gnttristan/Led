@@ -8,27 +8,30 @@ from urllib.parse import unquote, urlparse
 import numpy as np
 import soundfile as sf
 from yt_dlp import YoutubeDL
-from pyqtgraph.Qt import QtCore
+from PyQt5 import QtCore
 
 from backend.updatable.updatable import AudioUpdatable
 from config import SAMPLE_RATE
-from frontend.components.element.element import Element
-from frontend.components.element.element_value import ElementValue
-from frontend.components.player.playlist_player import PlaylistPlayer
-from frontend.components.textedit.textedit import TextEdit
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
+from frontend.components.elements.player.playlist_player import PlaylistPlayer
+from frontend.components.elements.textedit.textedit import TextEdit
 from frontend.nodes.cnode import CNode
 
 
 class SCPlaylistPlayer(CNode, AudioUpdatable):
     nodeName = "SCPlaylistPlayer"
     entries_cache_path = os.path.expanduser("~/.cache/led/sc_playlist_entries.pkl")
-    metadataReady = QtCore.Signal(object)
-    trackLoaded = QtCore.Signal(int)
+    metadataReady = QtCore.pyqtSignal(object)
+    trackLoaded = QtCore.pyqtSignal(int)
 
     def __init__(self,
-             playlist_url="https://soundcloud.com/trg-electro/sets/led",
-             browser="chrome", profile="Default", prefetch_seconds=10, render=True
-        ):
+             playlist_url: str = "https://soundcloud.com/trg-electro/sets/led",
+             browser: str = "chrome",
+             profile: str = "Default",
+             prefetch_seconds: int | float = 10,
+             render: bool = True
+        ) -> None:
         super().__init__(
             self.nodeName,
             {"audio": {"io": "out"}, "sample_rate": {"io": "out"}, "enqueue_token": {"io": "out"}},

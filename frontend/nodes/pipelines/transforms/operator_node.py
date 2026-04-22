@@ -1,22 +1,22 @@
 import numpy as np
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
-from pyqtgraph.Qt import QtWidgets
+from PyQt5 import QtWidgets
 
 from backend.pipelines.pipeline import AudioPipeline
-from frontend.components.element.element import Element
-from frontend.components.element.element_value import ElementValue
-from frontend.components.node_selector.node_selector import NodeSelector
-from frontend.components.textedit.textedit import TextEdit
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
+from frontend.components.elements.node_selector.node_selector import NodeSelector
+from frontend.components.elements.textedit.textedit import TextEdit
 from frontend.nodes.cnode import CNode
 
 class OperatorPipelineNode(CNode, AudioPipeline):
     nodeName = "OperatorPipeline"
     # operations_allowed = ["+", "-", "*", "/"]
-    successMessage = lambda self: "Operation compiled with success"
+    successMessage = lambda self, v: f"Operation compiled with success, Value : {v}"
     errorMessage = lambda self, e: f"Operation compile failed: {e}"
 
-    def __init__(self, arguments, length):
+    def __init__(self, arguments: list[object] = [], length: int = 0, render: bool = True) -> None:
         self.terminals_dict = {
             "data": {"io": "out"}
         }
@@ -26,7 +26,7 @@ class OperatorPipelineNode(CNode, AudioPipeline):
 
         self.update_terminal()
 
-        super().__init__(node_name=self.nodeName, terminals=self.terminals_dict.copy())
+        super().__init__(node_name=self.nodeName, terminals=self.terminals_dict.copy(), render=render)
 
         self.operation_elements = self.define_operation_elements(arguments)
         self.built_evaluation = None
@@ -34,26 +34,21 @@ class OperatorPipelineNode(CNode, AudioPipeline):
 
         self.data = Element(self, "data", ElementValue(np.zeros(length)))
 
-        self.operation_state_label = QtWidgets.QLabel(self.successMessage())
+        self.operation_state_label = QtWidgets.QLabel(self.successMessage(Element.format_value(self.data.value)))
         label_font = QFont(self.operation_state_label.font())
         label_font.setPointSize(8)
         self.operation_state_label.setFont(label_font)
-        self.operation_state_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.operation_state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.elements.append(self.operation_state_label)
 
-    def build_evaluation_arguments_callback(self):
-        try:
-            self.build_evaluation_arguments()
-            self.operation_state_label.setText(self.successMessage())
-            self.operation_state_label.setStyleSheet("color: green;")
-        except SyntaxError as e:
-            self.operation_state_label.setText(self.errorMessage(e))
-            self.operation_state_label.setStyleSheet("color: red;")
-
     def c_update(self):
-        ##!! When the element argument is being edited, we should skip here
+        ##!! When the elements argument is being edited, we should skip here
         self.build_evaluation_arguments()
-        self.data.value[:] = self.evaluate_arguments()
+        try:
+            self.data.value[:] = self.evaluate_arguments()
+            self.operation_state_label.setText(self.successMessage(Element.format_value(self.data.value)))
+        except Exception as e:
+            self.operation_state_label.setText(self.errorMessage(e))
 
     def resolve_element_name(self, arg):
         if isinstance(arg, Element):
@@ -107,14 +102,11 @@ class OperatorPipelineNode(CNode, AudioPipeline):
                 )
             elif isinstance(arg, str):
                 element = TextEdit(self, name, ElementValue(arg))
-                element.text_edit.textEdited.connect(self.build_evaluation_arguments_callback)
+                element.text_edit.textEdited.connect(self.build_evaluation_arguments)
             else:
                 element = TextEdit(self, name, ElementValue(str(arg)))
-                element.text_edit.textEdited.connect(self.build_evaluation_arguments_callback)
+                element.text_edit.textEdited.connect(self.build_evaluation_arguments)
             setattr(self, name, element)
             elements.append(element)
 
         return elements
-
-    def get_flowchart_visible_nodes(self):
-        return self.graphicsItem().getViewBox().widget.chart.visible_nodes

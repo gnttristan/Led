@@ -1,0 +1,2 @@
+from frontend.nodes.windows_fcts.averaged_window_fct import AveragedWindowFct
+from frontend.nodes.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct

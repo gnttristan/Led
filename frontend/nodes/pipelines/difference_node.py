@@ -7,7 +7,7 @@ from config import FREQ_BINS
 class DifferenceNode(Node):
     nodeName = "Difference"
 
-    def __init__(self, name):
+    def __init__(self, name: str, render: bool = True) -> None:
         terminals = {
             "a": {"io": "in"},
             "b": {"io": "in"},
@@ -23,4 +23,3 @@ class DifferenceNode(Node):
             b = np.zeros(FREQ_BINS)
 
         return {"diff": np.clip(np.asarray(a) - np.asarray(b), 0, 1)}
-

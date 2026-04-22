@@ -1,9 +1,9 @@
 import numpy as np
 
 from backend.updatable.updatable import AudioUpdatable
-from frontend.components.element.element import Element
-from frontend.components.element.element_value import ElementValue
-from frontend.components.dials import LinearDial
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
+from frontend.components.elements.dials import LinearDial
 from frontend.nodes.cnode import CNode
 
 
@@ -12,16 +12,16 @@ class AmplitudesLevelFunction(CNode, AudioUpdatable):
 
     def __init__(
         self,
-        number_points,
-        offset=0.85,
-        drop=0.6,
-        drop_center=75,
-        drop_width=10,
-        rise=0.15,
-        rise_center=225,
-        rise_width=10,
-        render=True
-    ):
+        number_points: int,
+        offset: float = 0.85,
+        drop: float = 0.6,
+        drop_center: int = 75,
+        drop_width: int = 10,
+        rise: float = 0.15,
+        rise_center: int = 225,
+        rise_width: int = 10,
+        render: bool = True
+    ) -> None:
         terminals = {
             "data": {"io": "out"},
         }

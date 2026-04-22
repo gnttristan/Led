@@ -1,11 +1,11 @@
 import numpy as np
-from pyqtgraph.Qt import QtWidgets
+from PyQt5 import QtWidgets
 from pyqtgraph.flowchart.Terminal import Terminal
 
 
 class CTerminal(Terminal):
     connexion_constraints = {
-        np.ndarray: lambda obj, obj2: obj.shape == obj2.shape,
+        np.ndarray: lambda obj, obj2: obj.shape[-1] == obj2.shape[-1],
     }
 
     @staticmethod
@@ -25,9 +25,12 @@ class CTerminal(Terminal):
         output_node = output_term.node()
         input_node = input_term.node()
 
-        if hasattr(output_node, "obj") and hasattr(input_node, "obj"):
-            output_value = getattr(output_node.obj, output_term.name()).value
-            input_value = getattr(input_node.obj, input_term.name()).value
+        output_owner = getattr(output_node, "obj", output_node)
+        input_owner = getattr(input_node, "obj", input_node)
+
+        if hasattr(output_owner, output_term.name()) and hasattr(input_owner, input_term.name()):
+            output_value = getattr(output_owner, output_term.name()).value
+            input_value = getattr(input_owner, input_term.name()).value
 
             if not isinstance(output_value, type(input_value)):
                 self.display_error_message(

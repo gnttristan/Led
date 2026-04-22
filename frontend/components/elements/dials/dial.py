@@ -1,18 +1,24 @@
-from pyqtgraph.Qt import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
-from frontend.components.element.element import Element
+from frontend.components.elements.element import Element
+from frontend.nodes.cnode import CNode
 
 
 class Dial(Element):
-    def __init__(self, node, name, min_value, max_value, value=None, **kwargs):
-        super().__init__(node, name, value)
+    def __init__(
+        self,
+        node: CNode,
+        name: str,
+        min_value: int | float | None = None,
+        max_value:int | float | None = None,
+        value: object = None,
+        **kwargs: object,
+    ) -> None:
+        super().__init__(node, name, value, **kwargs)
         self.min_value = min_value
         self.max_value = max_value
         self.value = min_value if self.value is None else self.value
         self.steps = 1000
-
-        if not node.render:
-            return
 
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
@@ -33,7 +39,7 @@ class Dial(Element):
 
         self.value_edit = QtWidgets.QLineEdit()
         self.value_edit.setFixedSize(40, 40)
-        self.value_edit.setAlignment(QtCore.Qt.AlignCenter)
+        self.value_edit.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.value_edit.editingFinished.connect(self.set_from_line_edit)
         self.controls_layout.addWidget(self.value_edit)
 
@@ -83,6 +89,18 @@ class Dial(Element):
 
     def to_dial(self):
         return int(self.unmap_value(self.value) * self.steps)
+
+    def check_value(self, placeholder_value):
+        try:
+            placeholder_value_f = float(placeholder_value)
+        except ValueError:
+            return False, f"Value must be a number"
+
+        if placeholder_value_f < self.min_value:
+            return False, f"Value must be greater than {self.min_value}"
+        if placeholder_value_f > self.max_value:
+            return False, f"Value must be less than {self.max_value}"
+        return True, None
 
     @staticmethod
     def format_value(value):

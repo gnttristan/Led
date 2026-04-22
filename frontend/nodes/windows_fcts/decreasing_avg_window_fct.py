@@ -6,8 +6,8 @@ from frontend.components.elements.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 
 
-class AveragedWindowFct(WindowFct, CNode):
-    nodeName = "AveragedWindowFct"
+class DecreasingAvgWindowFct(WindowFct, CNode):
+    nodeName = "DecreasingAvgWindowFct"
 
     def __init__(
         self,
@@ -25,5 +25,6 @@ class AveragedWindowFct(WindowFct, CNode):
         self.avg_axis = Element(self, "avg_axis", ElementValue(avg_axis))
 
     def aggregate(self, window_data):
-        self.data = np.mean(window_data, axis=self.avg_axis.value)
-        # self.data = np.ones(window_data.shape[-1])
+        weights = (np.arange(window_data.shape[0]) + 1)[::-1] / window_data.shape[0]
+        total_weight = np.sum(weights)
+        self.data = np.sum((window_data * weights[:, None]) / total_weight, axis=self.avg_axis)

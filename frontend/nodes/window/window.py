@@ -1,24 +1,32 @@
 import numpy as np
 
 from backend.updatable.updatable import AudioUpdatable
-from frontend.components.element.element import Element
-from frontend.components.element.element_value import ElementValue
-from frontend.components.dials import ExpDial
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
+from frontend.components.elements.dials import ExpDial
 from frontend.nodes.cnode import CNode
 
 
 class WindowNode(CNode, AudioUpdatable):
     nodeName = "Window"
 
-    def __init__(self, input_data, length, init_value=0., offset=0, render=True):
+    def __init__(
+        self,
+        input_data: np.ndarray | object = lambda x : np.zeros(0),
+        length: int | float = 0,
+        init_value: float = 0.0,
+        offset: int = 0,
+        render: bool = True,
+        is_child: bool = False,
+    ) -> None:
+        self.should_process = False
         terminals = {
             "input_data": {"io": "in"},
             "data": {"io": "out"}
         }
 
-        super().__init__(self.nodeName, terminals, render)
+        super().__init__(self.nodeName, terminals, render, is_child)
 
-        self.flag_changing_shape = False
         self.length = ExpDial(self, "length", 1, 1000, ElementValue(length))
         self.input_data = Element(self, "input_data", ElementValue(input_data)) # Data to aggregate
         self.offset = Element(self, "offset", ElementValue(offset))
@@ -29,32 +37,31 @@ class WindowNode(CNode, AudioUpdatable):
         ))
         self.window_fcts = Element(self, "window_fcts", ElementValue([]))
 
-        self.length.dial.valueChanged.connect(self.on_length_change)
+        self.length.valueChanged.connect(self.on_length_change)
+        self.should_process = True
 
     def on_length_change(self):
-        self.flag_changing_shape = True
+        self.should_process = False
 
+        input_shape = self.input_data.value.shape[0]
         int_length = int(self.length.value)
-        if int_length < self.data.value.shape[0]:
-            self.data.value = self.data.value[:int_length]
-        else:
-            self.data.value = np.vstack((
-                self.data.value,
-                np.zeros(((int_length - self.data.value.shape[0]), self.data.value.shape[1]))
-            ))
+        self.data.value = np.repeat(0.0, int_length * input_shape).reshape(int_length, input_shape)
 
-        self.flag_changing_shape = False
+        self.should_process = True
 
     def c_update(self):
+        if not self.should_process:
+            return
+        input_shape = self.input_data.value.shape[0]
+        if self.data.value.shape[0] != int(self.length.value) or self.data.value.shape[1] != input_shape:
+            self._resize_data(input_shape)
         self.roll()
         for window_fct in self.window_fcts.value:
             window_fct.aggregate(self.data.value)
 
     def roll(self):
-        if self.flag_changing_shape:
-            return
         try:
             self.data.value[:] = np.roll(self.data.value, -1, axis=0)
             self.data.value[-1] = np.roll(self.input_data.value, self.offset.value)
-        except ValueError:
+        except (IndexError, ValueError):
             pass

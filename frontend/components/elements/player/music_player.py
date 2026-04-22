@@ -1,27 +1,27 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from pyqtgraph.Qt import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
-from frontend.components.element.element_value import ElementValue
+from frontend.components.elements.element_value import ElementValue
 
 
 class MusicPlayer(QtWidgets.QWidget):
-    playClicked = QtCore.Signal(int)
-    pauseClicked = QtCore.Signal(int)
-    seekChanged = QtCore.Signal(int, float)
+    playClicked = QtCore.pyqtSignal(int)
+    pauseClicked = QtCore.pyqtSignal(int)
+    seekChanged = QtCore.pyqtSignal(int, float)
     WIDTH = 300
     HEIGHT = 50
 
     def __init__(
         self,
-        index,
-        artist,
-        title,
-        music_length=0,
+        index: int = 0,
+        artist: str = "artist",
+        title: str = "title",
+        music_length: int | float = 0,
         music_position: ElementValue = ElementValue(0),
-        disabled=True,
-        parent=None
-    ):
+        disabled: bool = True,
+        parent: QtWidgets.QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setFixedSize(self.WIDTH, self.HEIGHT)
 

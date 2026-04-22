@@ -1,6 +1,6 @@
 import math
 
-from frontend.components.dials.dial import Dial
+from frontend.components.elements.dials.dial import Dial
 
 
 class LogDial(Dial):

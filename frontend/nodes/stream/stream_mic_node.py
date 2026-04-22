@@ -1,8 +1,10 @@
+from typing import Callable
+
 from backend.updatable.updatable import AudioUpdatable
-from frontend.components.element.element import Element
-from frontend.components.element.element_value import ElementValue
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
 from frontend.nodes.cnode import CNode
-from frontend.components.dials.linear_dial import LinearDial
+from frontend.components.elements.dials.linear_dial import LinearDial
 
 import numpy as np
 import sounddevice as sd
@@ -13,9 +15,15 @@ from config import SAMPLE_RATE, CHUNK_SIZE
 class StreamMicNode(CNode, AudioUpdatable):
     nodeName = "StreamMic"
 
-    def __init__(self, user_callback=None, sample_rate=SAMPLE_RATE, chunk_size=CHUNK_SIZE):
+    def __init__(
+        self,
+        user_callback: Callable[[np.ndarray, int, object, object], None] | None = None,
+        sample_rate: int = SAMPLE_RATE,
+        chunk_size: int = CHUNK_SIZE,
+        render: bool = True,
+    ) -> None:
         terminals = {"chunk": {"io": "out"}}
-        super().__init__(self.nodeName, terminals)
+        super().__init__(self.nodeName, terminals, render=render)
 
         self.user_callback = user_callback
         self.sample_rate = Element(self, "Sample rate", ElementValue(sample_rate))

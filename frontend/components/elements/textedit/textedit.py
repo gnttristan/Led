@@ -1,14 +1,12 @@
-from pyqtgraph.Qt import QtWidgets
+from PyQt5 import QtWidgets
 
-from frontend.components.element.element import Element
+from frontend.components.elements.element import Element
+from frontend.nodes.cnode import CNode
 
 
 class TextEdit(Element):
-    def __init__(self, node, name, value=None):
-        super().__init__(node, name, value)
-
-        if not node.render:
-            return
+    def __init__(self, node: CNode, name: str, value: object = None, **kwargs: object) -> None:
+        super().__init__(node, name, value, **kwargs)
 
         self.text_edit = QtWidgets.QLineEdit(str(self.value))
         self.text_edit.setFixedWidth(100)

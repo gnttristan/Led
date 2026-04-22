@@ -1,14 +1,14 @@
 import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from pyqtgraph.Qt import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
-from frontend.components.element.element_value import ElementValue
+from frontend.components.elements.element_value import ElementValue
 from frontend.nodes.cnode import CNode
 
 
 class Element(QtWidgets.QWidget):
-    valueChanged = QtCore.Signal(object)
+    valueChanged = QtCore.pyqtSignal(object)
 
     str_trsf = {
         str: lambda x: x,
@@ -37,11 +37,14 @@ class Element(QtWidgets.QWidget):
     def connect_terminal(self, element):
         element.node[element.name.lower()].connectTo(self.node[self.name.lower()])
 
-    @staticmethod
-    def define_node_as_child(self):
-        self.node.is_child = True
-
-    def __init__(self, node, name, value, link_terminal=True):
+    def __init__(
+        self,
+        node: CNode,
+        name: str,
+        value: object,
+        link_terminal: bool = True,
+        register_in_node: bool = True,
+    ) -> None:
         self.node = node
         self.name = name
         self.link_terminal = link_terminal
@@ -56,16 +59,14 @@ class Element(QtWidgets.QWidget):
             value = value.value
 
         if isinstance(value, Element):
+            self._value_ref = ElementValue(lambda: value.value)
             self.value = value.value
-            if self.link_terminal:
+            if self.link_terminal and not self.node.is_child:
                 QtCore.QTimer.singleShot(0, lambda: self.connect_terminal(self, value))
         else:
             if isinstance(value, CNode):
                 self.node.is_child = True
             self._value = value
-
-        if not node.render:
-            return
 
         # HBox for elements
         self.hbox_elements = QtWidgets.QHBoxLayout()
@@ -121,7 +122,8 @@ class Element(QtWidgets.QWidget):
             "out": right_terminal_placeholder,
         }.get(self.terminal_io)
 
-        self.node.elements.append(self)
+        if register_in_node:
+            self.node.elements.append(self)
 
     @property
     def value(self):
@@ -210,6 +212,7 @@ class Element(QtWidgets.QWidget):
 
         terminal = self.node[self.terminal_name].graphicsItem()
         terminal.label.hide()
+        terminal.setZValue(100)
         placeholder_geometry = self.terminal_placeholder.geometry()
         anchor_y = title_offset + self.geometry().y() + placeholder_geometry.center().y()
         anchor_x = inner_margin + self.geometry().x() + placeholder_geometry.x()
@@ -218,3 +221,6 @@ class Element(QtWidgets.QWidget):
             terminal.setAnchor(anchor_x, anchor_y)
         else:
             terminal.setAnchor(anchor_x + placeholder_geometry.width(), anchor_y)
+
+    def check_value(self, placeholder_value):
+        return True, None
