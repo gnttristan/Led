@@ -1,3 +1,4 @@
+import numpy as np
 from PyQt5 import QtCore, QtWidgets
 
 from frontend.components.elements.element import Element
@@ -88,6 +89,8 @@ class Dial(Element):
                 self.value_edit.blockSignals(False)
 
     def to_dial(self):
+        if isinstance(self.value, np.ndarray):
+            return int((self.unmap_value(self.value) * self.steps).item())
         return int(self.unmap_value(self.value) * self.steps)
 
     def check_value(self, placeholder_value):

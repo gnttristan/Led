@@ -5,7 +5,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
 from config import DELAY_UPDATE
-from frontend.nodes.pipelines.amplitudes.amplitude_transformer_node import AmplitudesTransformerNode
+from frontend.nodes.pipelines.amplitudes.fct_amplitude_transformer_node import AmplitudesTransformerNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual.rgba_pipeline import RGBAPipelineNode

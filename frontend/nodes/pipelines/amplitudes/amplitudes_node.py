@@ -27,6 +27,7 @@ class AmplitudesNode(CNode, AudioUpdatable):
     ) -> None:
         terminals = {
             "buffer": {"io": "in"},
+            "frequencies": {"io": "out"},
             "data": {"io": "out"},
         }
         super().__init__(self.nodeName, terminals, render=render)

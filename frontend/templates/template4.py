@@ -3,25 +3,27 @@ import sys
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
 
-from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
 from config import DELAY_UPDATE, SAMPLE_RATE
-from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import AmplitudesTransformerNode
-from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
-from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual.rgba_pipeline import RGBAPipelineNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.cnode import CNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
-from frontend.nodes.playlist_player import SCPlaylistPlayer
+from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
+from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import AmplitudesTransformerNode
+from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
+from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
+from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
+from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode
+from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
 from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
 from frontend.nodes.stream import StreamMicNode
-from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.registry.registry import register_nodes
 
 register_nodes()
+
 
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
@@ -32,12 +34,18 @@ def main():
             obj.c_update()
 
     stream_mic_node = StreamMicNode(user_callback=audio_update)
-    buffer_node = BufferNode(indata=stream_mic_node.chunk)
+    analysis_chunk_size = int(SAMPLE_RATE * DELAY_UPDATE / 1000)
+
+    buffer_node = BufferNode(
+        indata=stream_mic_node.chunk,
+        chunk_size=stream_mic_node.chunk.value.shape[0],
+        length=analysis_chunk_size,
+    )
 
     amplitudes_node = AmplitudesNode(
         buffer=buffer_node.data,
-        powering=-0.2,
-        normalisation=True
+        fft_size=analysis_chunk_size,
+        normalisation=True,
     )
     #
     # smoothing_node = SmoothingNode(
@@ -84,32 +92,90 @@ def main():
     #     render = False
     # )
     #
-    # amplitudes_transformer_node = AmplitudesTransformerNode(
-    #     input_data=amplitudes_and_smoothed_added.data,
-    #     # correlation_offset=0.1,
-    #     # correlation_step=0.03,
-    #     # amplitudes_level_fct=amplitudes_level_function_node,
-    # )
+
+    low_filter_node = LowFilterPipelineNode(
+        buffer_data=buffer_node.data,
+    )
+
+    rms_node = RMSPipelineNode(
+        buffer_data=low_filter_node.data,
+        title="RMS",
+        number_points=100,
+        left_label="Level",
+        bottom_label="Time",
+        y_min=0.0,
+        y_max=1.0,
+    )
+
+    rms_transformed = ValueTransformerPipelineNode(
+        input_value=rms_node.data,
+        input_value_interval=[0.3, 0.5],
+        output_value_interval=[0.7, 1.2],
+    )
+
+    rms_lowpass_node = RMSPipelineNode(
+        buffer_data=low_filter_node.data,
+        title="RMS",
+        number_points=100,
+        left_label="Level",
+        bottom_label="Time",
+        y_min=0.0,
+        y_max=1.0,
+    )
+
+    rms_lowpass_transformed = ValueTransformerPipelineNode(
+        input_value=rms_lowpass_node.data,
+        input_value_interval=[0.3, 0.5],
+        output_value_interval=[0, 0.5],
+    )
+
+    amplitudes_transformer_node = AmplitudesTransformerNode(
+        input_data=amplitudes_node.data,
+        correlation_offset=0.1,
+        correlation_step=0.03,
+        # amplitudes_level_fct=amplitudes_level_function_node,
+    )
+
+    amplitudes_node_normalized = ValueTransformerPipelineNode(
+        input_value=amplitudes_transformer_node.data,
+        output_value_interval=[0, 1],
+        power=0.8,
+    )
+
+    amplitudes_with_rms = OperatorPipelineNode(
+        arguments=[
+            amplitudes_node_normalized.output_value,
+            "*",
+            rms_transformed.output_value,
+        ],
+        length=amplitudes_node_normalized.output_value.value.shape[-1],
+    )
 
     gradient_rainbow = GradiantRainbowNode()
 
+    colorize_pipeline = ColorizePipelineNode(
+        input_rgb=gradient_rainbow.data,
+        color=(255, 255, 255),
+    )
+
     rgba_pipeline = RGBAPipelineNode(
-        rgb=gradient_rainbow.data,
-        alpha=lambda: np.ones(amplitudes_node.data.value.shape[0]) * 255
+        rgb=colorize_pipeline.output_rgb,
+        alpha=lambda: amplitudes_with_rms.data.value * 255,
     )
 
     spectogram_chart_node = SpectrogramChartNode(
-        data=amplitudes_node.data,
+        data=np.ones(amplitudes_node.data.value.shape[0]),
         title="Amplitudes",
         number_points=amplitudes_node.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
-        brushes=rgba_pipeline.rgba,
+        brushes=rgba_pipeline.rgba.value,
         y_min=0,
         y_max=1,
     )
 
     chart_window = spectogram_chart_node.draw()
+    del chart_window
 
     # ------------------------ ADD FLOWCHART NODES ------------------------
     # ---------------------------------------------------------------------
@@ -120,8 +186,6 @@ def main():
         },
         nodes=list(filter(lambda x: isinstance(x, CNode) and x.render, list(locals().values())))
     )
-
-
 
     # -------------------------- DRAW FLOWCHART ---------------------------
     # ---------------------------------------------------------------------

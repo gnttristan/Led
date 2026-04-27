@@ -5,18 +5,24 @@ from PyQt5 import QtCore, QtWidgets
 
 from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
 from config import DELAY_UPDATE, SAMPLE_RATE
-from frontend.nodes.pipelines.amplitudes.amplitude_transformer_node import AmplitudesTransformerNode
+from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
+from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
+from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual.rgba_pipeline import RGBAPipelineNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode
+from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.cnode import CNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
+from frontend.nodes.pipelines.visual.sliding_amp_gradient import SlidingAmpGradientNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
+from frontend.nodes.simple import ConstantArrayNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
+from frontend.nodes.windows_fcts import DecreasingAvgWindowFct
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.registry.registry import register_nodes
 
@@ -48,11 +54,11 @@ def main():
         normalisation=True
     )
     #
-    # smoothing_node = SmoothingNode(
+    # smoothed_amplitudes_node = SmoothingNode(
     #     input_value=amplitudes_node.data,
-    #     length=500,
+    #     length=5,
     #     avg_axis=0,
-    #     window_function=DecreasingAvgWindowFct
+    #     # window_function=DecreasingAvgWindowFct
     # )
     #
     # new_amplitudes_node = OperatorPipelineNode(
@@ -92,7 +98,46 @@ def main():
     #     render = False
     # )
     #
-    amplitudes_transformer_node = AmplitudesTransformerNode(
+
+    low_filter_node = LowFilterPipelineNode(
+        buffer_data=buffer_node.data,
+    )
+
+    rms_node = RMSPipelineNode(
+        buffer_data=low_filter_node.data,
+        title="RMS",
+        number_points=100,
+        left_label="Level",
+        bottom_label="Time",
+        y_min=0.0,
+        y_max=1.0,
+    )
+
+    rms_transformed = ValueTransformerPipelineNode(
+        input_value=rms_node.data,
+        input_value_interval=[0.3, 0.5],
+        output_value_interval=[0.3, 1.2],
+    )
+
+    rms_lowpass_node = RMSPipelineNode(
+        buffer_data=low_filter_node.data,
+        title="RMS",
+        number_points=100,
+        left_label="Level",
+        bottom_label="Time",
+        y_min=0.0,
+        y_max=1.0,
+    )
+
+    rms_lowpass_transformed = ValueTransformerPipelineNode(
+        input_value=rms_lowpass_node.data,
+        input_value_interval=[0.2, 0.5],
+        output_value_interval=[0, 1],
+    )
+
+
+
+    amplitudes_transformer_node = LinearAmplitudesTransformerNode(
         input_data=amplitudes_node.data,
         correlation_offset=0.1,
         correlation_step=0.03,
@@ -102,18 +147,45 @@ def main():
     amplitudes_node_normalized = ValueTransformerPipelineNode(
         input_value=amplitudes_transformer_node.data,
         output_value_interval=[0, 1],
-        power=4
+        power=0.8
     )
 
-    gradient_rainbow = GradiantRainbowNode()
+    amplitudes_with_rms = OperatorPipelineNode(
+        arguments=[
+            amplitudes_node_normalized.output_value,
+            "*",
+            rms_transformed.output_value,
+        ],
+        length=amplitudes_node_normalized.output_value.value.shape[-1],
+    )
+
+    gradient_rainbow = GradiantRainbowNode(
+        inv_fraction=0.2,
+        cycle=1
+    )
+
+    colorize_pipeline = ColorizePipelineNode(
+        input_rgb=gradient_rainbow.data,
+        color=(255, 255, 255),
+    )
+
+    amplitudes_to_alpha = ValueTransformerPipelineNode(
+        input_value=amplitudes_with_rms.data,
+        input_value_interval=[0, 1],
+        output_value_interval=[0, 255],
+    )
 
     rgba_pipeline = RGBAPipelineNode(
-        rgb=gradient_rainbow.data,
-        alpha=lambda: amplitudes_node_normalized.output_value.value * 255
+        rgb=colorize_pipeline.output_rgb,
+        alpha=amplitudes_to_alpha.output_value
+    )
+
+    constant_array_one = ConstantArrayNode(
+        input_value=1,
     )
 
     spectogram_chart_node = SpectrogramChartNode(
-        data=np.ones(amplitudes_node.data.value.shape[0]),
+        data=constant_array_one.data,
         title="Amplitudes",
         number_points=amplitudes_node.data.value.shape[0],
         left_label="Frequency",
@@ -147,8 +219,6 @@ def main():
     graph_window.show()
 
     def visual_update():
-        if flowchart.should_pause_updates():
-            return
         for obj in audio_updatable_objects:
             obj.c_update()
         for obj in visual_updatable_objects:

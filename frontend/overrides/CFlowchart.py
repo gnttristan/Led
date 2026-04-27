@@ -4,16 +4,14 @@ from PyQt5 import QtCore
 from pyqtgraph.flowchart import Flowchart
 import networkx as nx
 
+from backend.updatable.updatable import pause_updates
 from frontend.components.elements.element import Element
 from frontend.components.ui.create_node_form import CreateNodeForm
 
 
 class CFlowchart(Flowchart):
-    UPDATE_PAUSE_MS = 150
-
     def __init__(self, nodes=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._pause_updates_until = 0
         self.widget().installEventFilter(self)
         self.inputNode.graphicsItem().hide()
         self.outputNode.graphicsItem().hide()
@@ -25,25 +23,17 @@ class CFlowchart(Flowchart):
         QtCore.QTimer.singleShot(0, lambda: self.place_nodes())
 
     def eventFilter(self, obj, event):
-        del obj
         if event.type() in (
             QtCore.QEvent.Type.MouseButtonPress,
             QtCore.QEvent.Type.MouseButtonRelease,
             QtCore.QEvent.Type.KeyPress,
             QtCore.QEvent.Type.Wheel,
         ):
-            self.pause_updates()
+            pause_updates()
         return False
 
-    def pause_updates(self, duration_ms=None):
-        if duration_ms is None:
-            duration_ms = self.UPDATE_PAUSE_MS
-        self._pause_updates_until = QtCore.QTime.currentTime().msecsSinceStartOfDay() + int(duration_ms)
-
-    def should_pause_updates(self):
-        return QtCore.QTime.currentTime().msecsSinceStartOfDay() < self._pause_updates_until
-
     def createNode(self, nodeType, name=None, pos=None):
+        needs_setup_form = name is None
         if name is None:
             n = 0
             while True:
@@ -53,12 +43,14 @@ class CFlowchart(Flowchart):
                 n += 1
         node_cls = self.library.getNodeType(nodeType)
         node = node_cls(render=False)
-        if not self.display_create_node_form(node):
+        if needs_setup_form and not self.display_create_node_form(node):
             return None
 
         if hasattr(node, "rename") and node.name() != name:
             node.rename(name)
         self.addNode(node, name, pos)
+        if hasattr(node, "init_all"):
+            node.init_all()
         draw = getattr(node, "draw", None)
         if callable(draw):
             QtCore.QTimer.singleShot(0, draw)

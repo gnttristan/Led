@@ -18,6 +18,15 @@ class ValueTransformerPipelineNode(CNode, AudioPipeline):
             max_value += 1e-12
         return [min_value, max_value]
 
+    @staticmethod
+    def _compute_input_value_shape(value):
+        shape_per_type = {
+            float: lambda x: 1,
+            int: lambda x: 1,
+            np.ndarray: lambda x: x.shape[-1]
+        }
+        return shape_per_type[type(value)](value)
+
     def __init__(
             self,
             input_value: np.ndarray = np.zeros(0),
@@ -44,15 +53,16 @@ class ValueTransformerPipelineNode(CNode, AudioPipeline):
         )
         self.output_value_interval = Element(self, "output_value_interval", ElementValue(output_value_interval))
         self.power = LinearDial(self, "power", 0.5, 3, ElementValue(power))
-        self.output_value = Element(self, "output_value", ElementValue(np.zeros(self.input_value.value.shape[-1])))
+        self.output_value = Element(self, "output_value", ElementValue(
+            np.zeros(self._compute_input_value_shape(self.input_value.value)))
+        )
 
 
     def c_update(self):
         updated = np.power(np.maximum(self.input_value.value, 0), self.power.value)
-        updated_interval = self._compute_input_interval(updated)
 
         self.output_value.value[:] = np.interp(
             updated,
-            updated_interval,
+            self.input_value_interval.value,
             self.output_value_interval.value
         )

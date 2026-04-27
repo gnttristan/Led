@@ -12,8 +12,8 @@ class RGBAPipelineNode(VisualPipeline, CNode):
 
     def __init__(
         self,
-        rgb: np.ndarray = np.zeros(0),
-        alpha: np.ndarray = np.zeros(0),
+        rgb: np.ndarray = np.zeros((FREQ_BINS, 3)),
+        alpha: np.ndarray = np.zeros(FREQ_BINS),
         render: bool = True,
     ) -> None:
         terminals = {

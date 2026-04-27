@@ -38,12 +38,12 @@ class CTerminal(Terminal):
                 )
                 return None
 
-            constraint = self.connexion_constraints.get(type(input_value))
-            if constraint is not None and not constraint(input_value, output_value):
-                self.display_error_message(
-                    f"Incompatible terminal values for {output_term.name()} -> {input_term.name()}"
-                )
-                return None
+            # constraint = self.connexion_constraints.get(type(input_value))
+            # if constraint is not None and not constraint(input_value, output_value):
+            #     self.display_error_message(
+            #         f"Incompatible terminal values for {output_term.name()} -> {input_term.name()}"
+            #     )
+            #     return None
 
         if input_term.isConnected() and not input_term.connectedTo(output_term):
             print(f"Terminal '{input_term.name()}' is already connected")

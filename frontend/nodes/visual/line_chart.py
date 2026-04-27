@@ -1,58 +1,48 @@
 import numpy as np
 
-from PyQt5 import sip
-
 from backend.updatable.updatable import VisualUpdatable
-from config import FREQ_BINS
-from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.components.elements.bar_graph_chart import BarGraphChartElement
+from frontend.components.elements.line_chart_element import LineChartElement
+from frontend.components.elements.element import Element
 from frontend.nodes.cnode import CNode
 
 
-class SpectrogramChartNode(CNode, VisualUpdatable):
-    nodeName = "Spectrogram"
+class LineChartNode(CNode, VisualUpdatable):
+    nodeName = "LineChart"
 
     def __init__(
         self,
-        data: np.ndarray = np.zeros(FREQ_BINS),
+        input_data: float = 0.0,
         title: str = "Title",
-        number_points: int = FREQ_BINS,
+        number_points: int = 100,
         left_label: str = "Left label",
         bottom_label: str = "Bottom label",
-        brushes: np.ndarray | object = np.zeros((FREQ_BINS, 4)),
-        y_min: int | float = 0.0,
-        y_max: int | float = 90.0,
         render: bool = True,
     ) -> None:
         terminals = {
-            "brushes": {"io": "in"},
-            "data": {"io": "in"},
+            "input_data": {"io": "in"},
         }
         self.title = ElementValue(title)
         super().__init__(node_name=self.nodeName, terminals=terminals, render=render)
 
+        self.input_data = Element(self, "input_data", ElementValue(input_data))
         self.number_points = Element(self, "number_points", ElementValue(number_points))
-        self.brushes = Element(self, "brushes", ElementValue(brushes))
         self.left_label = Element(self, "left_label", ElementValue(left_label))
         self.bottom_label = Element(self, "bottom_label", ElementValue(bottom_label))
-        self.y_min = Element(self, "y_min", ElementValue(y_min))
-        self.y_max = Element(self, "y_max", ElementValue(y_max))
-        self.data = Element(self, "data", ElementValue(data))
-        self.chart = BarGraphChartElement(
+        self.data = Element(self, "data", ElementValue(np.zeros(number_points)))
+        self.chart = LineChartElement(
             self,
             "chart",
-            data=self.data.value,
+            input_data=self.input_data.value,
             number_points=self.number_points.value,
             left_label=self.left_label.value,
             bottom_label=self.bottom_label.value,
-            brushes=self.brushes.value,
-            y_min=self.y_min.value,
-            y_max=self.y_max.value,
             title=self.title.value,
             link_terminal=False,
             register_in_node=True,
         )
+        self.elements.append(self.chart)
+
         if render:
             self.draw()
             self.chart.chart_button.setChecked(True)

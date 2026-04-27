@@ -1,6 +1,9 @@
+from typing import Any, Callable
+
+
 class ElementValue:
-    def __init__(self, value: object) -> None:
-        self._value = None
+    def __init__(self, value: Any | Callable[[], Any]) -> None:
+        self._value: Any = None
         self.value = value
 
     @property

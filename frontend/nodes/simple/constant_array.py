@@ -1,0 +1,32 @@
+import numpy as np
+
+from backend.config import FREQ_BINS
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
+from frontend.nodes.cnode import CNode
+
+
+class ConstantArrayNode(CNode):
+    nodeName = "ConstantArray"
+
+    def __init__(
+        self,
+        input_value: float = 0.0,
+        length: int = FREQ_BINS,
+        render: bool = True,
+    ) -> None:
+        terminals = {
+            "input_value": {"io": "in"},
+            "length": {"io": "in"},
+            "data": {"io": "out"},
+        }
+        super().__init__(self.nodeName, terminals, render=render)
+        self.input_value = Element(self, "input_value", ElementValue(input_value))
+        self.length = Element(self, "length", ElementValue(length))
+        self.data = Element(self, "data", ElementValue(np.zeros(int(self.length.value))))
+        self.input_value.valueChanged.connect(self._refresh_data)
+        self.length.valueChanged.connect(self._refresh_data)
+        self._refresh_data()
+
+    def _refresh_data(self, *_args) -> None:
+        self.data.value = np.repeat(float(self.input_value.value), int(self.length.value))
