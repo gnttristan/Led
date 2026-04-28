@@ -3,7 +3,7 @@ from typing import Callable
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 from frontend.components.elements.dials.linear_dial import LinearDial
 
 import numpy as np

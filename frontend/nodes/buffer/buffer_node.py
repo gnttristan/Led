@@ -4,7 +4,7 @@ from config import CHUNK_SIZE, FFT_SIZE
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class BufferNode(CNode, AudioUpdatable):
@@ -16,12 +16,13 @@ class BufferNode(CNode, AudioUpdatable):
         chunk_size: int = CHUNK_SIZE,
         length: int = FFT_SIZE,
         render: bool = True,
+        alias: str | None = None,
     ) -> None:
         terminals = {
             "indata": {"io": "in"},
             "data": {"io": "out"},
         }
-        super().__init__(self.nodeName, terminals, render=render)
+        super().__init__(self.nodeName, terminals, render=render, alias=alias)
 
         self.indata = Element(self, "indata", ElementValue(indata))
         self.chunk_size = Element(self, "chunk_size", ElementValue(chunk_size))

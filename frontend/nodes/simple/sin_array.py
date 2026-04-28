@@ -1,8 +1,9 @@
 import numpy as np
 
+from backend.config import FREQ_BINS
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class SinArrayNode(CNode):
@@ -10,34 +11,39 @@ class SinArrayNode(CNode):
 
     def __init__(
         self,
-        cycle_length: int = 100,
+        number_cycle: float = 2,
+        number_points: int = FREQ_BINS,
         center: float = 0.5,
         offset: float = 0.1,
         render: bool = True,
+        alias: str | None = None,
     ) -> None:
         terminals = {
-            "cycle_length": {"io": "in"},
+            "number_cycle": {"io": "in"},
+            "number_points": {"io": "in"},
             "center": {"io": "in"},
             "offset": {"io": "in"},
             "data": {"io": "out"},
         }
-        super().__init__(self.nodeName, terminals, render=render)
+        super().__init__(self.nodeName, terminals, render=render, alias=alias)
 
-        self.cycle_length = Element(self, "cycle_length", ElementValue(cycle_length))
+        self.number_cycle = Element(self, "number_cycle", ElementValue(number_cycle))
+        self.number_points = Element(self, "number_points", ElementValue(number_points))
         self.center = Element(self, "center", ElementValue(center))
         self.offset = Element(self, "offset", ElementValue(offset))
-        self.data = Element(self, "data", ElementValue(np.zeros(int(self.cycle_length.value))))
+        self.data = Element(self, "data", ElementValue(np.zeros(int(self.number_points.value))))
 
-        self.cycle_length.valueChanged.connect(self._refresh_data)
+        self.number_cycle.valueChanged.connect(self._refresh_data)
+        self.number_points.valueChanged.connect(self._refresh_data)
         self.center.valueChanged.connect(self._refresh_data)
         self.offset.valueChanged.connect(self._refresh_data)
         self._refresh_data()
 
     def _refresh_data(self, *_args) -> None:
-        cycle_length = int(self.cycle_length.value)
-        if cycle_length <= 0:
-            self.data.value = np.zeros(0)
+        target_len = int(self.number_points.value)
+        if target_len <= 0:
+            self.data.value = np.zeros(max(0, target_len))
             return
 
-        x = np.linspace(0, 2 * np.pi, cycle_length, endpoint=False)
+        x = np.linspace(0, 2 * np.pi * float(self.number_cycle.value), target_len, endpoint=False)
         self.data.value = self.center.value + (self.offset.value * np.sin(x))

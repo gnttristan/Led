@@ -1,20 +1,29 @@
 import sys
 
-import numpy as np
 from PyQt5 import QtCore, QtWidgets
 
-from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
-from config import DELAY_UPDATE
-from frontend.nodes.pipelines.amplitudes.fct_amplitude_transformer_node import AmplitudesTransformerNode
+from config import DELAY_UPDATE, SAMPLE_RATE
+from frontend.enums.gradiant.gradiant_mode import GradiantMode
+from frontend.nodes.function.outbounds_up_fct import OutboundsUpFctNode
+from frontend.nodes.pipelines.amplitudes.freqscaled_amplitude_transformer_node import \
+    FreqScaledAmplitudesTransformerNode
+from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
+from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
+from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
+from frontend.nodes.pipelines.transforms.smoothing_node import SmoothingNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual.rgba_pipeline import RGBAPipelineNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode, SingleColorNode, RollingNode
+from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
-from frontend.nodes.cnode import CNode
-from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
+from frontend.nodes.visual import BarGraphChartNode
+from frontend.overrides.CNode import CNode
+from frontend.nodes.pipelines import AmplitudesNode
+from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
-from frontend.nodes.stream import StreamMicNode
+from frontend.nodes.simple import ConstantArrayNode, SinArrayNode
+from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.registry.registry import register_nodes
@@ -24,81 +33,120 @@ register_nodes()
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    def audio_update(indata, frames, time, status):
-        del indata, frames, time, status
-        for obj in audio_updatable_objects:
-            obj.c_update()
+    sc_playlist_player_node = SCPlaylistPlayer(alias="sc_playlist_player_node")
+    analysis_chunk_size = int(SAMPLE_RATE * DELAY_UPDATE / 1000)
 
-    stream_mic_node = StreamMicNode(user_callback=audio_update)
-    buffer_node = BufferNode(indata=stream_mic_node.chunk)
-
-    amplitudes_node = AmplitudesNode(
-        buffer=buffer_node.data,
-        normalisation=True
+    stream_player_node = StreamPlayerNode(
+        audio_in=sc_playlist_player_node.audio,
+        sample_rate_in=sc_playlist_player_node.sample_rate,
+        enqueue_token=sc_playlist_player_node.enqueue_token,
+        chunk_size=analysis_chunk_size,
+        alias="stream_player_node",
     )
 
-    smoothing_node = SmoothingNode(
-        input_value=amplitudes_node.data,
-        length=130,
+    buffer_node = BufferNode(
+        indata=stream_player_node.chunk,
+        chunk_size=stream_player_node.chunk.value.shape[0],
+        length=analysis_chunk_size,
+        alias="buffer_node",
+    )
+
+    sin_array_node = SinArrayNode(
+        alias="sin_array_node",
+        center=0.3,
+        offset=0.1
+    )
+
+    rolling_sin = RollingNode(
+        input_data=sin_array_node.data,
+        roll_speed=2,
+        alias="rolling_sin",
+    )
+
+    gradiant_rainbow = GradiantRainbowNode(
+        color_in=(0, 0, 255),
+        color_out=(127, 0, 127),
+        cycle=-0.05,
+        mode=GradiantMode.MIRROR,
+        alias="gradiant_rainbow",
+    )
+
+    rolling_rgb = RollingNode(
+        input_data=gradiant_rainbow.data,
+        roll_speed=3,
+        alias="rolling_brushes",
+    )
+
+    low_filter_node = LowFilterPipelineNode(
+        buffer_data=buffer_node.data,
+        lowpass_freq=400,
+        alias="low_filter_node",
+    )
+
+    rms_low_filter_node = RMSPipelineNode(
+        buffer_data=low_filter_node.data,
+        alias="rms_low_filter_node",
+    )
+
+    avg_window_rms_lf_node = SmoothingNode(
+        input_value=rms_low_filter_node.data,
+        length=1000,
         avg_axis=0,
     )
 
-    new_amplitudes_node = OperatorPipelineNode(
+    lowpass_difference = OperatorPipelineNode(
         arguments=[
-            amplitudes_node.data,
+            rms_low_filter_node.data,
             "-",
-            smoothing_node.data
+            avg_window_rms_lf_node.data,
         ],
-        length=smoothing_node.data.value.shape[0]
+        length=rms_low_filter_node.data.value.shape[-1],
+        alias="lowpass_difference",
     )
 
-    new_amplitudes_node_normalized = ValueTransformerPipelineNode(
-        input_value=new_amplitudes_node.data,
+    lowpass_difference_transformed = ValueTransformerPipelineNode(
+        input_value=lowpass_difference.data,
+        input_value_interval=[0, 0.1],
         output_value_interval=[0, 1],
-        power=1
+        alias="lowpass_difference_transformed",
     )
 
-    # amplitudes_and_smoothed_added = OperatorPipelineNode(
-    #     arguments=[
-    #         "(",
-    #         amplitudes_node.data,
-    #         "*",
-    #         0.4,
-    #         ")",
-    #         "+",
-    #         "(",
-    #         new_amplitudes_node_normalized.output_value,
-    #         "*",
-    #         0.6,
-    #         ")",
-    #     ],
-    #     length=new_amplitudes_node_normalized.output_value.value.shape[0]
-    # )
-    #
-    # amplitudes_level_function_node = AmplitudesLevelFunction(
-    #     number_points=amplitudes_and_smoothed_added.data.value.shape[0],
-    #     render = False
-    # )
-    #
-    # amplitudes_transformer_node = AmplitudesTransformerNode(
-    #     input_data=amplitudes_and_smoothed_added.data,
-    #     # correlation_offset=1,
-    #     # correlation_step=0.5,
-    #     # amplitudes_level_fct=amplitudes_level_function_node,
-    #     log=0.8,
-    # )
-    #
-    gradient_rainbow = GradiantRainbowNode()
+    outbounds_up_fct = OutboundsUpFctNode(
+        y=lowpass_difference_transformed.output_value,
+        alias="outbounds_up_fct",
+    )
+
+    alpha_with_outbound_up = OperatorPipelineNode(
+        arguments=[
+            rolling_sin.data,
+            "+",
+            outbounds_up_fct.data,
+        ],
+        length=outbounds_up_fct.data.value.shape[-1],
+        alias="alpha_with_outbound_up",
+    )
+
+    sin_to_alpha = ValueTransformerPipelineNode(
+        input_value=alpha_with_outbound_up.data,
+        input_value_interval=[0, 1.5],
+        output_value_interval=[0, 255],
+        alias="sin_to_alpha",
+    )
 
     rgba_pipeline = RGBAPipelineNode(
-        rgb=gradient_rainbow.data,
-        alpha=np.ones(amplitudes_node.data.value.shape[0]) * 255
+        rgb=rolling_rgb.data,
+        alpha=sin_to_alpha.output_value,
     )
 
-    spectogram_chart_node = SpectrogramChartNode(
-        data=new_amplitudes_node_normalized.output_value.value,
+    constant_array_one = ConstantArrayNode(
+        input_value=1,
+        alias="constant_array_one",
+    )
+
+    bar_graph_chart_node = BarGraphChartNode(
+        data=constant_array_one.data,
         title="Amplitudes",
-        number_points=amplitudes_node.data.value.shape[0],
+        number_points=sin_array_node.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
         brushes=rgba_pipeline.rgba,
@@ -106,7 +154,7 @@ def main():
         y_max=1,
     )
 
-    chart_window = spectogram_chart_node.draw()
+    chart_window = bar_graph_chart_node.draw()
 
     # ------------------------ ADD FLOWCHART NODES ------------------------
     # ---------------------------------------------------------------------
@@ -130,16 +178,17 @@ def main():
     graph_window.show()
 
     def visual_update():
+        for obj in audio_updatable_objects:
+            obj.c_update()
         for obj in visual_updatable_objects:
             obj.c_update()
 
-    stream_mic_node.start()
+    sc_playlist_player_node.start()
 
     timer = QtCore.QTimer()
     timer.timeout.connect(visual_update)
     timer.start(DELAY_UPDATE)
 
-    app.aboutToQuit.connect(stream_mic_node.stop)
     sys.exit(app.exec_())
 
 

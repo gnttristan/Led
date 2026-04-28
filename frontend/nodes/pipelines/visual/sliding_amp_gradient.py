@@ -5,7 +5,7 @@ from config import FREQ_BINS
 from frontend.components.elements.dials import LinearDial
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 from frontend.nodes.rainbow import GradiantRainbowNode
 
 
@@ -39,7 +39,7 @@ class SlidingAmpGradientNode(VisualPipeline, CNode):
         self.slide_min_avg_amp = LinearDial(self, "slide_min_avg_amp", 500, 3000, ElementValue(slide_min_avg_amp))
         self.slide_max_avg_amp = LinearDial(self, "slide_max_avg_amp", 2000, 5000, ElementValue(slide_max_avg_amp))
         self.gradiant_rainbow = Element(self, "rgba", ElementValue(GradiantRainbowNode(
-            n_points=self.n_points_gradiant.value, is_child=True, roll_speed=0, inv_fraction=0.4
+            n_points=self.n_points_gradiant.value, is_child=True, inv_fraction=0.4
         )))
         self.data = Element(self, "data", ElementValue(np.zeros((FREQ_BINS, 3))))
         self.avg_amplitudes = Element(self, "data", ElementValue(0.))

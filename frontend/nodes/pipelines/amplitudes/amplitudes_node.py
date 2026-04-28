@@ -6,7 +6,7 @@ from backend.updatable.updatable import AudioUpdatable
 from frontend.components.elements.dials import ExpDial, LinearDial
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class AmplitudesNode(CNode, AudioUpdatable):
@@ -24,13 +24,14 @@ class AmplitudesNode(CNode, AudioUpdatable):
             powering: int | float = 0.5,
             normalisation: bool = True,
             render: bool = True,
+            alias: str | None = None,
     ) -> None:
         terminals = {
             "buffer": {"io": "in"},
             "frequencies": {"io": "out"},
             "data": {"io": "out"},
         }
-        super().__init__(self.nodeName, terminals, render=render)
+        super().__init__(self.nodeName, terminals, render=render, alias=alias)
 
         self.freq_bins = Element(self, "freq_bins", ElementValue(freq_bins))
         self.buffer = Element(self, "buffer", ElementValue(buffer))

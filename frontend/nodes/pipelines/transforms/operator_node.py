@@ -8,7 +8,7 @@ from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.components.elements.node_selector.node_selector import NodeSelector
 from frontend.components.elements.textedit.textedit import TextEdit
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 class OperatorPipelineNode(CNode, AudioPipeline):
     nodeName = "OperatorPipeline"
@@ -16,23 +16,24 @@ class OperatorPipelineNode(CNode, AudioPipeline):
     successMessage = lambda self, v: f"Operation compiled with success, Value : {v}"
     errorMessage = lambda self, e: f"Operation compile failed: {e}"
 
-    def __init__(self, arguments: list[object] = [], length: int = 0, render: bool = True) -> None:
+    def __init__(self, arguments: list[object] = [], length: int = 0, render: bool = True, alias: str | None = None) -> None:
         self.terminals_dict = {
             "data": {"io": "out"}
         }
 
+        self.length = length
         self.arguments = arguments
         self.operation_element_names = [self.resolve_element_name(arg) for arg in arguments]
 
         self.update_terminal()
 
-        super().__init__(node_name=self.nodeName, terminals=self.terminals_dict.copy(), render=render)
+        super().__init__(node_name=self.nodeName, terminals=self.terminals_dict.copy(), render=render, alias=alias)
 
         self.operation_elements = self.define_operation_elements(arguments)
         self.built_evaluation = None
         self.build_evaluation_arguments()
 
-        self.data = Element(self, "data", ElementValue(np.zeros(length)))
+        self.data = Element(self, "data", ElementValue(np.zeros(self.length)))
 
         self.operation_state_label = QtWidgets.QLabel(self.successMessage(Element.format_value(self.data.value)))
         label_font = QFont(self.operation_state_label.font())
@@ -50,20 +51,32 @@ class OperatorPipelineNode(CNode, AudioPipeline):
         except Exception as e:
             self.operation_state_label.setText(self.errorMessage(e))
 
+    def saveState(self):
+        state = super().saveState()
+        state["arguments"] = [
+            {
+                "__element_ref__": {
+                    "node_name": arg.node.name(),
+                    "element_name": arg.name,
+                }
+            }
+            if isinstance(arg, Element)
+            else CNode.serialize_state_value(arg)
+            for arg in self.arguments
+        ]
+        return state
+
     def resolve_element_name(self, arg):
         if isinstance(arg, Element):
-            return f"{arg.node.name()}:{arg.name}".lower()
+            node_name = getattr(arg.node, "alias", None) or arg.node.name()
+            return f"{node_name}:{arg.name}".lower()
         return str(arg)
 
     def resolve_token(self, token):
         if isinstance(token, Element):
             return self.resolve_token(token.value)
         if isinstance(token, np.ndarray):
-            return f"np.array({(
-                str(np.char.add(token.astype(str), ","))
-                .replace("'", "")
-                .replace("\n", "")
-            )})"
+            return f"np.array({repr(token.tolist())})"
         return str(token)
 
     def build_evaluation_arguments(self):

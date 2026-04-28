@@ -1,9 +1,9 @@
 import numpy as np
 
-from config import FFT_SIZE, FREQ_BINS, MAX_FREQUENCY, MIN_FREQUENCY
+from config import FREQ_BINS
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 from frontend.nodes.pipelines.amplitudes.amplitude_transformer import AmplitudesTransformer
 
 
@@ -17,15 +17,15 @@ class LinearAmplitudesTransformerNode(CNode, AmplitudesTransformer):
             correlation_step: int | float | None = None,
             powering: float = 1.,
             log: float = 1.,
-            amplitudes_level_fct: object = None,
             render: bool = True,
+            alias: str | None = None,
     ) -> None:
         terminals = {
             "input_data": {"io": "in"},
             "data": {"io": "out"},
         }
 
-        CNode.__init__(self, self.nodeName, terminals, render=render)
+        CNode.__init__(self, self.nodeName, terminals, render=render, alias=alias)
         AmplitudesTransformer.__init__(self, powering=powering, log=log)
 
         self.input_data = Element(self, "input_data", ElementValue(input_data))
@@ -34,7 +34,6 @@ class LinearAmplitudesTransformerNode(CNode, AmplitudesTransformer):
         self.powering = Element(self, "powering", ElementValue(powering))
         self.log = Element(self, "log", ElementValue(log))
         self.data = Element(self, "data", ElementValue(np.zeros(FREQ_BINS)))
-        self.amplitudes_level_fct = Element(self, "amplitudes_level_fct", amplitudes_level_fct)
 
     def c_update(self):
         self.transform_amplitudes(self.input_data.value)

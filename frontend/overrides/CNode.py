@@ -1,6 +1,7 @@
 import inspect
 from typing import Mapping
 
+import numpy as np
 from PyQt5 import QtGui, QtWidgets
 from PyQt5 import QtCore
 from PyQt5 import sip
@@ -14,6 +15,7 @@ class CNode(Node):
     INNER_MARGIN = 10
     TERMINAL_WIDTH = 40
     TITLE_OFFSET = 24
+    _SERDE_TAG = "__cnode_serde__"
 
     def __init__(
         self,
@@ -21,8 +23,10 @@ class CNode(Node):
         terminals: Mapping[str, Mapping[str, object]],
         render: bool = True,
         is_child: bool = False,
+        alias: str | None = None,
     ) -> None:
         self.node_name = node_name
+        self.alias = alias or node_name
         self.render = render
         self.elements = []
         self.pending_terminals = dict(terminals)
@@ -31,7 +35,7 @@ class CNode(Node):
         self.is_child = is_child
         self.is_initiated = False
 
-        super().__init__(node_name)
+        super().__init__(self.alias)
 
         if not render:
             return
@@ -41,6 +45,121 @@ class CNode(Node):
     def init_all(self):
         self.init_terminals()
         self.init_elements()
+
+    def saveState(self):
+        state = super().saveState()
+        init_signature = inspect.signature(type(self).__init__)
+        ctor_kwargs = {}
+        init_refs = {}
+
+        for parameter_name, parameter in init_signature.parameters.items():
+            if parameter_name in {"self", "render", "alias"}:
+                continue
+
+            terminal = self.terminals.get(parameter_name.lower())
+            remote_terminal = (
+                next(iter(terminal.connections().keys()), None)
+                if terminal is not None and terminal.isInput()
+                else None
+            )
+
+            if remote_terminal is not None and remote_terminal.isOutput():
+                init_refs[parameter_name] = {
+                    "__element_ref__": {
+                        "node_name": remote_terminal.node().name(),
+                        "element_name": remote_terminal.name(),
+                    }
+                }
+                remote_owner = getattr(remote_terminal.node(), "obj", remote_terminal.node())
+                if hasattr(remote_owner, remote_terminal.name()):
+                    remote_element = getattr(remote_owner, remote_terminal.name())
+                    if hasattr(remote_element, "value"):
+                        raw_value = remote_element.value
+                    else:
+                        raw_value = remote_element
+                else:
+                    raw_value = None
+            elif hasattr(self, parameter_name):
+                raw_value = getattr(self, parameter_name)
+                if hasattr(raw_value, "value"):
+                    raw_value = raw_value.value
+            elif parameter.default is not inspect._empty:
+                raw_value = parameter.default
+            else:
+                raw_value = None
+
+            serialized_value = self.serialize_state_value(raw_value)
+            if serialized_value is not None:
+                ctor_kwargs[parameter_name] = serialized_value
+
+        if ctor_kwargs:
+            state["ctor_kwargs"] = ctor_kwargs
+        if init_refs:
+            state["init_refs"] = init_refs
+
+        return state
+
+    @classmethod
+    def serialize_state_value(cls, value):
+        if isinstance(value, np.ndarray):
+            return {
+                cls._SERDE_TAG: "ndarray",
+                "dtype": str(value.dtype),
+                "value": value.tolist(),
+            }
+        if isinstance(value, np.generic):
+            return {
+                cls._SERDE_TAG: "npscalar",
+                "dtype": str(value.dtype),
+                "value": value.item(),
+            }
+        if isinstance(value, tuple):
+            serialized = []
+            for item in value:
+                item_value = cls.serialize_state_value(item)
+                if item_value is None:
+                    return None
+                serialized.append(item_value)
+            return {
+                cls._SERDE_TAG: "tuple",
+                "value": serialized,
+            }
+        if isinstance(value, list):
+            serialized = []
+            for item in value:
+                item_value = cls.serialize_state_value(item)
+                if item_value is None:
+                    return None
+                serialized.append(item_value)
+            return serialized
+        if isinstance(value, dict):
+            serialized_dict = {}
+            for key, item in value.items():
+                item_value = cls.serialize_state_value(item)
+                if item_value is None:
+                    return None
+                serialized_dict[key] = item_value
+            return serialized_dict
+        if callable(value):
+            return None
+        if isinstance(value, (str, int, float, bool, type(None))):
+            return value
+        return None
+
+    @classmethod
+    def deserialize_state_value(cls, value):
+        if isinstance(value, dict):
+            serde_type = value.get(cls._SERDE_TAG)
+            if serde_type == "ndarray":
+                return np.array(value["value"], dtype=np.dtype(value["dtype"]))
+            if serde_type == "npscalar":
+                return np.dtype(value["dtype"]).type(value["value"])
+            if serde_type == "tuple":
+                return tuple(cls.deserialize_state_value(item) for item in value["value"])
+            return {key: cls.deserialize_state_value(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [cls.deserialize_state_value(item) for item in value]
+        return value
 
     def init_terminals(self):
         for name, opts in self.pending_terminals.items():
@@ -66,7 +185,7 @@ class CNode(Node):
         self._elements_proxy = QtWidgets.QGraphicsProxyWidget(item)
         self._elements_proxy.setWidget(container)
         self._elements_proxy.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, False)
-        self._elements_proxy.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsPanel, True)
+        self._elements_proxy.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsPanel, False)
         self._elements_proxy.setZValue(1)
         self._elements_proxy.setPos(self.INNER_MARGIN, self.TITLE_OFFSET)
 

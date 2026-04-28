@@ -3,7 +3,7 @@ import numpy as np
 from backend.config import FREQ_BINS
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class ConstantArrayNode(CNode):
@@ -14,13 +14,14 @@ class ConstantArrayNode(CNode):
         input_value: float = 0.0,
         length: int = FREQ_BINS,
         render: bool = True,
+        alias: str | None = None,
     ) -> None:
         terminals = {
             "input_value": {"io": "in"},
             "length": {"io": "in"},
             "data": {"io": "out"},
         }
-        super().__init__(self.nodeName, terminals, render=render)
+        super().__init__(self.nodeName, terminals, render=render, alias=alias)
         self.input_value = Element(self, "input_value", ElementValue(input_value))
         self.length = Element(self, "length", ElementValue(length))
         self.data = Element(self, "data", ElementValue(np.zeros(int(self.length.value))))

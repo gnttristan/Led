@@ -1,12 +1,10 @@
-from typing import Type
-
 from backend.updatable.updatable import AudioUpdatable
 
 import numpy as np
 
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 from frontend.nodes.window.window import WindowNode
 from backend.windows_fcts.window_fct import WindowFct
 from frontend.nodes.windows_fcts.averaged_window_fct import AveragedWindowFct

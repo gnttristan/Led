@@ -1,7 +1,7 @@
 from PyQt5 import QtCore, QtWidgets
 
 from frontend.components.elements.element import Element
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class ChartElement(Element):

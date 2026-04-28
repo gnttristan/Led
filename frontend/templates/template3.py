@@ -3,20 +3,15 @@ import sys
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
 
-from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
-from config import DELAY_UPDATE, SAMPLE_RATE
+from config import DELAY_UPDATE
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import AmplitudesTransformerNode
-from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
-from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual.rgba_pipeline import RGBAPipelineNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
-from frontend.nodes.cnode import CNode
-from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
-from frontend.nodes.playlist_player import SCPlaylistPlayer
+from frontend.overrides.CNode import CNode
+from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
 from frontend.nodes.stream import StreamMicNode
-from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.registry.registry import register_nodes

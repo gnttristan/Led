@@ -4,7 +4,7 @@ from backend.updatable.updatable import VisualUpdatable
 from frontend.components.elements.element_value import ElementValue
 from frontend.components.elements.line_chart_element import LineChartElement
 from frontend.components.elements.element import Element
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class LineChartNode(CNode, VisualUpdatable):
@@ -18,12 +18,13 @@ class LineChartNode(CNode, VisualUpdatable):
         left_label: str = "Left label",
         bottom_label: str = "Bottom label",
         render: bool = True,
+        alias: str | None = None,
     ) -> None:
         terminals = {
             "input_data": {"io": "in"},
         }
         self.title = ElementValue(title)
-        super().__init__(node_name=self.nodeName, terminals=terminals, render=render)
+        super().__init__(node_name=self.nodeName, terminals=terminals, render=render, alias=alias)
 
         self.input_data = Element(self, "input_data", ElementValue(input_data))
         self.number_points = Element(self, "number_points", ElementValue(number_points))
@@ -51,4 +52,8 @@ class LineChartNode(CNode, VisualUpdatable):
         return self.chart.draw()
 
     def c_update(self):
+        value = self.input_data.value
+        if isinstance(value, np.ndarray):
+            value = float(np.ravel(value)[-1]) if value.size else 0.0
+        self.chart.input_data = float(value)
         return self.chart.c_update()

@@ -16,12 +16,13 @@ from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.components.elements.player.playlist_player import PlaylistPlayer
 from frontend.components.elements.textedit.textedit import TextEdit
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class SCPlaylistPlayer(CNode, AudioUpdatable):
     nodeName = "SCPlaylistPlayer"
     entries_cache_path = os.path.expanduser("~/.cache/led/sc_playlist_entries.pkl")
+    tracks_cache_path = os.path.expanduser("~/.cache/led/sc_playlist_tracks.pkl")
     metadataReady = QtCore.pyqtSignal(object)
     trackLoaded = QtCore.pyqtSignal(int)
 
@@ -30,17 +31,21 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
              browser: str = "chrome",
              profile: str = "Default",
              prefetch_seconds: int | float = 10,
-             render: bool = True
+             cache: bool = True,
+             render: bool = True,
+             alias: str | None = None
         ) -> None:
         super().__init__(
             self.nodeName,
             {"audio": {"io": "out"}, "sample_rate": {"io": "out"}, "enqueue_token": {"io": "out"}},
             render=render,
+            alias=alias,
         )
         self.playlist_url = TextEdit(self, "playlist_url", ElementValue(playlist_url))
         self.browser = TextEdit(self, "browser", ElementValue(browser))
         self.profile = TextEdit(self, "profile", ElementValue(profile))
         self.prefetch_seconds = Element(self, "prefetch_seconds", ElementValue(float(prefetch_seconds)))
+        self.cache = Element(self, "cache", ElementValue(bool(cache)))
         self.audio = Element(self, "audio", ElementValue(np.zeros((0, 2), dtype=np.float32)))
         self.sample_rate = Element(self, "sample_rate", ElementValue(0))
         self.enqueue_token = Element(self, "enqueue_token", ElementValue(0))
@@ -73,17 +78,15 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
         return opts
 
     @staticmethod
-    def _extract_entries(url, opts):
+    def _extract_entries(url, opts, use_cache=True):
         key_raw = f"{url}|{repr(sorted(opts.items()))}"
         cache_key = hashlib.sha256(key_raw.encode("utf-8")).hexdigest()
-        cache = {}
-        try:
-            with open(SCPlaylistPlayer.entries_cache_path, "rb") as f:
-                cache = pickle.load(f)
-        except Exception:
+        if use_cache:
+            cache = SCPlaylistPlayer._load_cache(SCPlaylistPlayer.entries_cache_path)
+            if cache_key in cache:
+                return cache[cache_key]
+        else:
             cache = {}
-        if cache_key in cache:
-            return cache[cache_key]
 
         playlist_opts = dict(opts)
         playlist_opts["extract_flat"] = "in_playlist"
@@ -94,17 +97,45 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
 
         cache[cache_key] = entries
         try:
-            os.makedirs(os.path.dirname(SCPlaylistPlayer.entries_cache_path), exist_ok=True)
-            with open(SCPlaylistPlayer.entries_cache_path, "wb") as f:
-                pickle.dump(cache, f)
+            SCPlaylistPlayer._save_cache(SCPlaylistPlayer.entries_cache_path, cache)
         except Exception:
             pass
 
         return entries
 
     @staticmethod
-    def _download_track(entry, opts):
+    def _load_cache(path):
+        try:
+            with open(path, "rb") as f:
+                return pickle.load(f)
+        except Exception:
+            return {}
+
+    @staticmethod
+    def _save_cache(path, cache):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            pickle.dump(cache, f)
+
+    @classmethod
+    def _track_cache_key(cls, track_url, opts):
+        key_raw = f"{track_url}|{repr(sorted(opts.items()))}"
+        return hashlib.sha256(key_raw.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def _download_track(cls, entry, opts, use_cache=True):
         track_url = entry.get("url")
+        if not track_url:
+            return np.zeros((0, 2), dtype=np.float32), SAMPLE_RATE
+
+        cache_key = cls._track_cache_key(track_url, opts)
+        if use_cache:
+            cache = cls._load_cache(cls.tracks_cache_path)
+            if cache_key in cache:
+                return cache[cache_key]
+        else:
+            cache = {}
+
         with tempfile.TemporaryDirectory() as tmp:
             dl_opts = dict(opts)
             dl_opts["outtmpl"] = os.path.join(tmp, "track.%(ext)s")
@@ -113,7 +144,16 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
             YoutubeDL(dl_opts).download([track_url])
             wav_path = os.path.join(tmp, "track.wav")
             audio, sr = sf.read(wav_path)
-            return audio, sr
+            audio = np.asarray(audio, dtype=np.float32)
+            audio = audio[:, None] if audio.ndim == 1 else audio
+            result = (audio, int(sr))
+
+        cache[cache_key] = result
+        try:
+            cls._save_cache(cls.tracks_cache_path, cache)
+        except Exception:
+            pass
+        return result
 
     @staticmethod
     def _slug_to_text(value):
@@ -135,7 +175,8 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
     def _worker(self):
         url = str(self.playlist_url.value).strip()
         opts = self._ydl_opts()
-        entries = self._extract_entries(url, opts)
+        use_cache = bool(self.cache.value)
+        entries = self._extract_entries(url, opts, use_cache=use_cache)
         metadata = [self._entry_metadata(entry) for entry in entries]
         with self._data_lock:
             self._tracks = [None] * len(entries)
@@ -145,11 +186,8 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
         for idx, entry in enumerate(entries):
             if self._stop_event.is_set():
                 break
-            n_audio, n_sr = self._download_track(entry, opts)
-            arr = np.asarray(n_audio, dtype=np.float32)
-            arr = arr[:, None] if arr.ndim == 1 else arr
             with self._data_lock:
-                self._tracks[idx] = (arr, int(n_sr))
+                self._tracks[idx] = self._download_track(entry, opts, use_cache=use_cache)
             self.trackLoaded.emit(idx)
 
     def on_track_loaded(self, index):

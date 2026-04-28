@@ -4,7 +4,7 @@ from backend.updatable.updatable import AudioUpdatable
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.components.elements.dials import ExpDial
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class WindowNode(CNode, AudioUpdatable):
@@ -17,6 +17,7 @@ class WindowNode(CNode, AudioUpdatable):
         init_value: float = 0.0,
         offset: int = 0,
         render: bool = True,
+        alias: str | None = None,
         is_child: bool = False,
     ) -> None:
         self.should_process = False
@@ -25,7 +26,7 @@ class WindowNode(CNode, AudioUpdatable):
             "data": {"io": "out"}
         }
 
-        super().__init__(self.nodeName, terminals, render, is_child)
+        super().__init__(self.nodeName, terminals, render=render, alias=alias, is_child=is_child)
 
         self.length = ExpDial(self, "length", 1, 1000, ElementValue(length))
         self.input_data = Element(self, "input_data", ElementValue(input_data)) # Data to aggregate

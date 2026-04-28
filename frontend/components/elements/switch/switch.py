@@ -1,7 +1,7 @@
 from pyqt_switch import PyQtSwitch
 
 from frontend.components.elements.element import Element
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class Switch(Element):

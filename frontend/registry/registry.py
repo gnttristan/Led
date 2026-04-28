@@ -10,15 +10,18 @@ from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelin
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow import GradiantRainbowNode
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
 from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
 from frontend.nodes.stream import StreamPlayerNode, StreamMicNode
+from frontend.nodes.visual.bar_graph_chart import BarGraphChartNode
 from frontend.nodes.visual.line_chart import LineChartNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
 from frontend.nodes.simple.constant_array import ConstantArrayNode
+from frontend.nodes.pipelines.visual import SingleColorNode
 from frontend.nodes.simple.sin_array import SinArrayNode
 from frontend.nodes.window.window import WindowNode
 from frontend.nodes.windows_fcts.averaged_window_fct import AveragedWindowFct
@@ -27,6 +30,7 @@ from frontend.nodes.windows_fcts.decreasing_avg_window_fct import DecreasingAvgW
 nodes = [
     BufferNode,
     ConstantArrayNode,
+    SingleColorNode,
     SinArrayNode,
     AmplitudesNode,
     SmoothingNode,
@@ -38,9 +42,11 @@ nodes = [
     AveragedWindowFct,
     DecreasingAvgWindowFct,
     SpectrogramChartNode,
+    BarGraphChartNode,
     LineChartNode,
     GradiantRainbowNode,
     ColorizePipelineNode,
+    RollingNode,
     ValueTransformerPipelineNode,
     OperatorPipelineNode,
     LinearAmplitudesTransformerNode,
@@ -49,7 +55,8 @@ nodes = [
     AmplitudesLevelFunction,
     StreamPlayerNode,
     StreamMicNode,
-    SCPlaylistPlayer
+    SCPlaylistPlayer,
+    RGBAPipelineNode,
 ]
 
 def register_nodes():

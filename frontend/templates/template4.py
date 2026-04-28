@@ -6,9 +6,8 @@ from PyQt5 import QtCore, QtWidgets
 from config import DELAY_UPDATE, SAMPLE_RATE
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
-from frontend.nodes.cnode import CNode
-from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
-from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
+from frontend.overrides.CNode import CNode
+from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import AmplitudesTransformerNode
 from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode

@@ -4,11 +4,27 @@ from PyQt5.QtGui import QFont
 from PyQt5 import QtCore, QtWidgets
 
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class Element(QtWidgets.QWidget):
     valueChanged = QtCore.pyqtSignal(object)
+
+    @staticmethod
+    def _format_ndarray(x: np.ndarray) -> str:
+        if x.size == 0:
+            return f"empty shape:{x.shape}"
+        if x.size == 1:
+            scalar = x.reshape(-1)[0]
+            if isinstance(scalar, (float, np.floating)):
+                return f"{float(scalar):.2f}"
+            return str(scalar)
+        return (
+            f"min:{float(np.min(x)):.2f} "
+            f"avg:{float(np.mean(x)):.2f} "
+            f"max:{float(np.max(x)):.2f} "
+            f"shape:{x.shape}"
+        )
 
     str_trsf = {
         str: lambda x: x,
@@ -17,7 +33,7 @@ class Element(QtWidgets.QWidget):
         float: lambda x: f"{x:.2f}",
         list: lambda x: f"{x}",
         CNode: lambda x: x.nodeName,
-        np.ndarray: lambda x: f"{x.shape}",
+        np.ndarray: lambda x: Element._format_ndarray(x),
     }
 
     @classmethod
@@ -35,7 +51,12 @@ class Element(QtWidgets.QWidget):
 
     @staticmethod
     def connect_terminal(self, element):
-        element.node[element.name.lower()].connectTo(self.node[self.name.lower()])
+        ##!! ToDo Look in depth and maybe change [#1]
+        source_terminal = element.node[element.name.lower()]
+        target_terminal = self.node[self.name.lower()]
+        if target_terminal.isConnected() and target_terminal.connectedTo(source_terminal):
+            return
+        source_terminal.connectTo(target_terminal)
 
     def __init__(
         self,

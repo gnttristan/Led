@@ -5,7 +5,7 @@ from config import SAMPLE_RATE, FFT_SIZE
 from frontend.components.elements.dials import LinearDial
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 from frontend.nodes.pipelines.auditory.filter.filter import Filter
 
 

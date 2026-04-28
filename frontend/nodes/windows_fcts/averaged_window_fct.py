@@ -3,7 +3,7 @@ import numpy as np
 from backend.windows_fcts.window_fct import WindowFct
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class AveragedWindowFct(WindowFct, CNode):

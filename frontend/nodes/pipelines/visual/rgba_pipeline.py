@@ -4,7 +4,7 @@ from backend.pipelines.pipeline import VisualPipeline
 from config import FREQ_BINS
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class RGBAPipelineNode(VisualPipeline, CNode):
@@ -15,6 +15,7 @@ class RGBAPipelineNode(VisualPipeline, CNode):
         rgb: np.ndarray = np.zeros((FREQ_BINS, 3)),
         alpha: np.ndarray = np.zeros(FREQ_BINS),
         render: bool = True,
+        alias: str | None = None,
     ) -> None:
         terminals = {
             "rgb": {"io": "in"},
@@ -22,7 +23,7 @@ class RGBAPipelineNode(VisualPipeline, CNode):
             "rgba": {"io": "out"},
         }
         VisualPipeline.__init__(self)
-        CNode.__init__(self, node_name=self.nodeName, terminals=terminals, render=render)
+        CNode.__init__(self, node_name=self.nodeName, terminals=terminals, render=render, alias=alias)
 
         self.rgb = Element(self, "rgb", ElementValue(rgb))
         self.alpha = Element(self, "alpha", ElementValue(alpha))

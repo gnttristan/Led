@@ -8,7 +8,7 @@ from config import CHUNK_SIZE, SAMPLE_RATE
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class StreamPlayerNode(CNode, AudioUpdatable):
@@ -22,6 +22,7 @@ class StreamPlayerNode(CNode, AudioUpdatable):
         sample_rate: int = SAMPLE_RATE,
         chunk_size: int = CHUNK_SIZE,
         render: bool = True,
+        alias: str | None = None,
         user_callback: Callable[[np.ndarray, int, object, object], None] | None = None
     ) -> None:
         terminals = {
@@ -30,11 +31,12 @@ class StreamPlayerNode(CNode, AudioUpdatable):
             "enqueue_token": {"io": "in"},
             "chunk": {"io": "out"},
         }
-        super().__init__(self.nodeName, terminals=terminals, render=render)
+        super().__init__(self.nodeName, terminals=terminals, render=render, alias=alias)
         self.audio_in = Element(self, "audio_in", ElementValue(audio_in))
         self.sample_rate_in = Element(self, "sample_rate_in", ElementValue(sample_rate_in))
         self.enqueue_token = Element(self, "enqueue_token", ElementValue(enqueue_token))
         self.sample_rate = Element(self, "sample_rate", ElementValue(sample_rate))
+        self.chunk_size = Element(self, "chunk_size", ElementValue(chunk_size))
         self.chunk = Element(self, "chunk", ElementValue(np.zeros(chunk_size, dtype=np.float32)))
         self.user_callback = user_callback
         self._last_enqueue_token = int(self.enqueue_token.value)

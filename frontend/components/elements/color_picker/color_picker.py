@@ -1,8 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from frontend.components.elements.element import Element
-from frontend.components.elements.element_value import ElementValue
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 
 class ColorPicker(Element):

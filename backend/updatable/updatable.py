@@ -1,6 +1,6 @@
 from PyQt5 import QtCore
 
-from frontend.nodes.cnode import CNode
+from frontend.overrides.CNode import CNode
 
 audio_updatable_objects = []
 visual_updatable_objects = []
@@ -10,10 +10,6 @@ _pause_updates_until = 0
 def pause_updates(duration_ms=150):
     global _pause_updates_until
     _pause_updates_until = QtCore.QTime.currentTime().msecsSinceStartOfDay() + int(duration_ms)
-
-
-def should_pause_updates():
-    return QtCore.QTime.currentTime().msecsSinceStartOfDay() < _pause_updates_until
 
 
 class Updatable:

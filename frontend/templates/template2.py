@@ -1,28 +1,26 @@
 import sys
 
-import numpy as np
 from PyQt5 import QtCore, QtWidgets
 
-from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
 from config import DELAY_UPDATE, SAMPLE_RATE
+from frontend.nodes.pipelines.amplitudes.freqscaled_amplitude_transformer_node import \
+    FreqScaledAmplitudesTransformerNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import RGBAPipelineNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
 from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
-from frontend.nodes.cnode import CNode
-from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
-from frontend.nodes.pipelines.visual.sliding_amp_gradient import SlidingAmpGradientNode
+from frontend.overrides.CNode import CNode
+from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
 from frontend.nodes.simple import ConstantArrayNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
-from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
-from frontend.nodes.windows_fcts import DecreasingAvgWindowFct
+from frontend.nodes.visual import BarGraphChartNode, LineChartNode
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.registry.registry import register_nodes
 
@@ -31,123 +29,91 @@ register_nodes()
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    sc_playlist_player_node = SCPlaylistPlayer()
+    sc_playlist_player_node = SCPlaylistPlayer(cache=False, alias="sc_playlist_player_node")
     analysis_chunk_size = int(SAMPLE_RATE * DELAY_UPDATE / 1000)
 
     stream_player_node = StreamPlayerNode(
-        audio_in=lambda: sc_playlist_player_node.audio.value,
-        sample_rate_in=lambda: sc_playlist_player_node.sample_rate.value,
-        enqueue_token=lambda: sc_playlist_player_node.enqueue_token.value,
+        audio_in=sc_playlist_player_node.audio,
+        sample_rate_in=sc_playlist_player_node.sample_rate,
+        enqueue_token=sc_playlist_player_node.enqueue_token,
         chunk_size=analysis_chunk_size,
+        alias="stream_player_node",
     )
 
     buffer_node = BufferNode(
         indata=stream_player_node.chunk,
         chunk_size=stream_player_node.chunk.value.shape[0],
         length=analysis_chunk_size,
+        alias="buffer_node",
     )
 
     amplitudes_node = AmplitudesNode(
         buffer=buffer_node.data,
         fft_size=analysis_chunk_size,
         # powering=0.5,
-        normalisation=True
+        normalisation=True,
+        alias="amplitudes_node",
     )
-    #
-    # smoothed_amplitudes_node = SmoothingNode(
-    #     input_value=amplitudes_node.data,
-    #     length=5,
-    #     avg_axis=0,
-    #     # window_function=DecreasingAvgWindowFct
-    # )
-    #
-    # new_amplitudes_node = OperatorPipelineNode(
-    #     arguments=[
-    #         amplitudes_node.data,
-    #         "-",
-    #         smoothing_node.data
-    #     ],
-    #     length=smoothing_node.data.value.shape[0]
-    # )
-    #
-    # new_amplitudes_node_normalized = ValueTransformerPipelineNode(
-    #     input_value=new_amplitudes_node.data,
-    #     output_value_interval=[0, 1],
-    #     power=4
-    # )
-    #
-    # amplitudes_and_smoothed_added = OperatorPipelineNode(
-    #     arguments=[
-    #         "(",
-    #         amplitudes_node.data,
-    #         "*",
-    #         0.4,
-    #         ")",
-    #         "+",
-    #         "(",
-    #         new_amplitudes_node_normalized.output_value,
-    #         "*",
-    #         0.6,
-    #         ")",
-    #     ],
-    #     length=new_amplitudes_node_normalized.output_value.value.shape[0]
-    # )
-    #
-    # amplitudes_level_function_node = AmplitudesLevelFunction(
-    #     number_points=amplitudes_and_smoothed_added.data.value.shape[0],
-    #     render = False
-    # )
-    #
 
     low_filter_node = LowFilterPipelineNode(
         buffer_data=buffer_node.data,
+        alias="low_filter_node",
     )
 
     rms_node = RMSPipelineNode(
         buffer_data=low_filter_node.data,
+        alias="rms_node",
+    )
+
+    rms_chart_node = LineChartNode(
+        input_data=rms_node.data,
         title="RMS",
         number_points=100,
         left_label="Level",
         bottom_label="Time",
-        y_min=0.0,
-        y_max=1.0,
+        render=True,
+        alias="rms_chart_node",
     )
 
     rms_transformed = ValueTransformerPipelineNode(
         input_value=rms_node.data,
-        input_value_interval=[0.3, 0.5],
-        output_value_interval=[0.3, 1.2],
+        input_value_interval=[0, 0.6],
+        output_value_interval=[0, 1.8],
+        alias="rms_transformed",
     )
-
     rms_lowpass_node = RMSPipelineNode(
         buffer_data=low_filter_node.data,
-        title="RMS",
+        alias="rms_lowpass_node",
+    )
+
+    rms_lowpass_chart_node = LineChartNode(
+        input_data=rms_lowpass_node.data,
+        title="RMS Lowpass",
         number_points=100,
         left_label="Level",
         bottom_label="Time",
-        y_min=0.0,
-        y_max=1.0,
+        render=True,
+        alias="rms_lowpass_chart_node",
     )
 
     rms_lowpass_transformed = ValueTransformerPipelineNode(
         input_value=rms_lowpass_node.data,
         input_value_interval=[0.2, 0.5],
         output_value_interval=[0, 1],
+        alias="rms_lowpass_transformed",
     )
 
-
-
-    amplitudes_transformer_node = LinearAmplitudesTransformerNode(
+    amplitudes_transformer_node = FreqScaledAmplitudesTransformerNode(
         input_data=amplitudes_node.data,
-        correlation_offset=0.1,
-        correlation_step=0.03,
-        # amplitudes_level_fct=amplitudes_level_function_node,
+        alias="amplitudes_transformer_node",
     )
 
     amplitudes_node_normalized = ValueTransformerPipelineNode(
         input_value=amplitudes_transformer_node.data,
+        input_value_interval=[0, 6],
         output_value_interval=[0, 1],
-        power=0.8
+        power=0.8,
+        alias="amplitudes_node_normalized",
     )
 
     amplitudes_with_rms = OperatorPipelineNode(
@@ -157,34 +123,46 @@ def main():
             rms_transformed.output_value,
         ],
         length=amplitudes_node_normalized.output_value.value.shape[-1],
+        alias="amplitudes_with_rms",
     )
 
     gradient_rainbow = GradiantRainbowNode(
         inv_fraction=0.2,
-        cycle=1
+        cycle=1,
+        alias="gradient_rainbow",
+    )
+
+    rolling_rainbow = RollingNode(
+        input_data=gradient_rainbow.data,
+        alias="rolling_rainbow",
     )
 
     colorize_pipeline = ColorizePipelineNode(
-        input_rgb=gradient_rainbow.data,
+        input_rgb=rolling_rainbow.data,
         color=(255, 255, 255),
+        color_level=rms_lowpass_transformed.output_value,
+        alias="colorize_pipeline",
     )
 
     amplitudes_to_alpha = ValueTransformerPipelineNode(
         input_value=amplitudes_with_rms.data,
         input_value_interval=[0, 1],
         output_value_interval=[0, 255],
+        alias="amplitudes_to_alpha",
     )
 
     rgba_pipeline = RGBAPipelineNode(
         rgb=colorize_pipeline.output_rgb,
-        alpha=amplitudes_to_alpha.output_value
+        alpha=amplitudes_to_alpha.output_value,
+        alias="rgba_pipeline",
     )
 
     constant_array_one = ConstantArrayNode(
         input_value=1,
+        alias="constant_array_one",
     )
 
-    spectogram_chart_node = SpectrogramChartNode(
+    spectogram_chart_node = BarGraphChartNode(
         data=constant_array_one.data,
         title="Amplitudes",
         number_points=amplitudes_node.data.value.shape[0],
@@ -230,8 +208,6 @@ def main():
     timer.timeout.connect(visual_update)
     timer.start(DELAY_UPDATE)
 
-    app.aboutToQuit.connect(sc_playlist_player_node.stop)
-    app.aboutToQuit.connect(stream_player_node.stop)
     sys.exit(app.exec_())
 
 
