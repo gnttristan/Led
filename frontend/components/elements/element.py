@@ -54,6 +54,16 @@ class Element(QtWidgets.QWidget):
         ##!! ToDo Look in depth and maybe change [#1]
         source_terminal = element.node[element.name.lower()]
         target_terminal = self.node[self.name.lower()]
+        source_item = source_terminal.graphicsItem()
+        target_item = target_terminal.graphicsItem()
+        if (
+            source_item.getViewBox() is None
+            or target_item.getViewBox() is None
+            or source_item.connectPoint() is None
+            or target_item.connectPoint() is None
+        ):
+            QtCore.QTimer.singleShot(25, lambda: Element.connect_terminal(self, element))
+            return
         if target_terminal.isConnected() and target_terminal.connectedTo(source_terminal):
             return
         source_terminal.connectTo(target_terminal)

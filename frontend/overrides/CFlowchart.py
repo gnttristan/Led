@@ -7,6 +7,7 @@ from pyqtgraph.flowchart import Flowchart
 import networkx as nx
 
 from backend.updatable.updatable import pause_updates, audio_updatable_objects, visual_updatable_objects
+from config import NODE_LAYOUT_X_GAP, NODE_LAYOUT_Y_GAP
 from frontend.components.elements.element import Element
 from frontend.components.ui.create_node_form import CreateNodeForm
 from frontend.overrides.CNode import CNode
@@ -197,26 +198,59 @@ class CFlowchart(Flowchart):
                     if dst_node in self.visible_nodes:
                         graph.add_edge(src_name, dst_node.name())
 
-        positions = None
-        if positions is None:
-            if nx.is_directed_acyclic_graph(graph):
-                for layer, nodes in enumerate(nx.topological_generations(graph)):
-                    for node_name in nodes:
-                        graph.nodes[node_name]["layer"] = layer
-            else:
-                condensed = nx.condensation(graph)
-                comp_layer = {}
-                for layer, components in enumerate(nx.topological_generations(condensed)):
-                    for comp in components:
-                        comp_layer[comp] = layer
-                for node_name, comp in condensed.graph["mapping"].items():
-                    graph.nodes[node_name]["layer"] = comp_layer[comp]
+        if nx.is_directed_acyclic_graph(graph):
+            layers = [list(nodes) for nodes in nx.topological_generations(graph)]
+        else:
+            condensed = nx.condensation(graph)
+            comp_layers = list(nx.topological_generations(condensed))
+            mapping = condensed.graph["mapping"]
+            layers = []
+            for components in comp_layers:
+                layer_nodes = [
+                    node_name
+                    for node_name, component in mapping.items()
+                    if component in components
+                ]
+                layers.append(layer_nodes)
 
-            positions = nx.multipartite_layout(graph, subset_key="layer", align="vertical")
-            positions = {k: (float(v[0]) * 2000.0, float(v[1]) * 3000.0) for k, v in positions.items()}
+        x_gap = float(NODE_LAYOUT_X_GAP)
+        y_gap = float(NODE_LAYOUT_Y_GAP)
+        positions = {}
+        x = 0.0
+        for layer_nodes in layers:
+            layer_width = max(self._layout_node_size(node_by_name[name])[0] for name in layer_nodes)
+            layer_height = sum(self._layout_node_size(node_by_name[name])[1] for name in layer_nodes)
+            layer_height += y_gap * max(0, len(layer_nodes) - 1)
+            y = -layer_height / 2.0
+            for node_name in sorted(layer_nodes):
+                _, node_height = self._layout_node_size(node_by_name[node_name])
+                positions[node_name] = (x, y + node_height / 2.0)
+                y += node_height + y_gap
+            x += layer_width + x_gap
 
         for node_name, (x, y) in positions.items():
-            node_by_name[node_name].graphicsItem().setPos(float(x), float(-y))
+            node_by_name[node_name].graphicsItem().setPos(float(x), float(y))
+
+    def _layout_node_size(self, node):
+        item = node.graphicsItem()
+        rect = item.boundingRect()
+        width = max(float(rect.width()), 180.0)
+        height = max(float(rect.height()), 100.0)
+
+        group_nodes = getattr(node, "nodes", None)
+        if group_nodes:
+            visible_children = [child for child in group_nodes if getattr(child, "render", False)]
+            if visible_children:
+                child_widths = []
+                child_heights = []
+                for child in visible_children:
+                    child_rect = child.graphicsItem().boundingRect()
+                    child_widths.append(max(float(child_rect.width()), 180.0))
+                    child_heights.append(max(float(child_rect.height()), 100.0))
+                width = max(width, sum(child_widths) + 360.0 * max(0, len(child_widths) - 1))
+                height = max(height, max(child_heights))
+
+        return width, height
 
     def display_create_node_form(self, node):
         node_name = node.name()

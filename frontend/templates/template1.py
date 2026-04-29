@@ -4,6 +4,8 @@ from PyQt5 import QtCore, QtWidgets
 
 from config import DELAY_UPDATE, SAMPLE_RATE
 from frontend.enums.gradiant.gradiant_mode import GradiantMode
+from frontend.group_nodes import KickDecayNode
+from frontend.nodes.features import CrestFactorNode, OnsetStrengthNode
 from frontend.nodes.function.outbounds_up_fct import OutboundsUpFctNode
 from frontend.nodes.pipelines.amplitudes.freqscaled_amplitude_transformer_node import \
     FreqScaledAmplitudesTransformerNode
@@ -21,7 +23,7 @@ from frontend.nodes.visual import BarGraphChartNode
 from frontend.overrides.CNode import CNode
 from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
-from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
+from frontend.nodes.rainbow import RainbowNode
 from frontend.nodes.simple import ConstantArrayNode, SinArrayNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
@@ -63,7 +65,7 @@ def main():
         alias="rolling_sin",
     )
 
-    gradiant_rainbow = GradiantRainbowNode(
+    gradiant_rainbow = RainbowNode(
         color_in=(0, 0, 255),
         color_out=(127, 0, 127),
         cycle=-0.05,
@@ -77,42 +79,16 @@ def main():
         alias="rolling_brushes",
     )
 
-    low_filter_node = LowFilterPipelineNode(
+    kick_decay_node = KickDecayNode(
         buffer_data=buffer_node.data,
-        lowpass_freq=400,
-        alias="low_filter_node",
-    )
-
-    rms_low_filter_node = RMSPipelineNode(
-        buffer_data=low_filter_node.data,
-        alias="rms_low_filter_node",
-    )
-
-    avg_window_rms_lf_node = SmoothingNode(
-        input_value=rms_low_filter_node.data,
-        length=1000,
-        avg_axis=0,
-    )
-
-    lowpass_difference = OperatorPipelineNode(
-        arguments=[
-            rms_low_filter_node.data,
-            "-",
-            avg_window_rms_lf_node.data,
-        ],
-        length=rms_low_filter_node.data.value.shape[-1],
-        alias="lowpass_difference",
-    )
-
-    lowpass_difference_transformed = ValueTransformerPipelineNode(
-        input_value=lowpass_difference.data,
-        input_value_interval=[0, 0.1],
-        output_value_interval=[0, 1],
-        alias="lowpass_difference_transformed",
+        lowpass_freq=300,
+        threshold=0.3,
+        decay_length=5,
+        alias="kick_decay_node",
     )
 
     outbounds_up_fct = OutboundsUpFctNode(
-        y=lowpass_difference_transformed.output_value,
+        y=kick_decay_node.data,
         alias="outbounds_up_fct",
     )
 

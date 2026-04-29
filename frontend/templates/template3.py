@@ -10,7 +10,7 @@ from backend.updatable.updatable import audio_updatable_objects, visual_updatabl
 from frontend.nodes.buffer import BufferNode
 from frontend.overrides.CNode import CNode
 from frontend.nodes.pipelines import AmplitudesNode
-from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
+from frontend.nodes.rainbow import RainbowNode
 from frontend.nodes.stream import StreamMicNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
 from frontend.overrides.CFlowchart import CFlowchart
@@ -86,7 +86,7 @@ def main():
     #     # amplitudes_level_fct=amplitudes_level_function_node,
     # )
 
-    gradient_rainbow = GradiantRainbowNode()
+    gradient_rainbow = RainbowNode()
 
     rgba_pipeline = RGBAPipelineNode(
         rgb=gradient_rainbow.data,

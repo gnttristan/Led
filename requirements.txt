@@ -6,7 +6,7 @@ pyserial
 crcmod
 
 # Used by desktop/debug and visualization entrypoints
-pandas
 pyqtgraph
 PyQt5
+networkx
 pyqt-switch

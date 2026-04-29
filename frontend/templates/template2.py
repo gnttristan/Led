@@ -17,7 +17,7 @@ from frontend.nodes.buffer import BufferNode
 from frontend.overrides.CNode import CNode
 from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
-from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
+from frontend.nodes.rainbow import RainbowNode
 from frontend.nodes.simple import ConstantArrayNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.visual import BarGraphChartNode, LineChartNode
@@ -29,7 +29,7 @@ register_nodes()
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    sc_playlist_player_node = SCPlaylistPlayer(cache=False, alias="sc_playlist_player_node")
+    sc_playlist_player_node = SCPlaylistPlayer(cache=True, alias="sc_playlist_player_node")
     analysis_chunk_size = int(SAMPLE_RATE * DELAY_UPDATE / 1000)
 
     stream_player_node = StreamPlayerNode(
@@ -126,7 +126,7 @@ def main():
         alias="amplitudes_with_rms",
     )
 
-    gradient_rainbow = GradiantRainbowNode(
+    gradient_rainbow = RainbowNode(
         inv_fraction=0.2,
         cycle=1,
         alias="gradient_rainbow",

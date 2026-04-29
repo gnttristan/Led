@@ -6,7 +6,7 @@ from frontend.components.elements.dials import LinearDial
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.overrides.CNode import CNode
-from frontend.nodes.rainbow import GradiantRainbowNode
+from frontend.nodes.rainbow import RainbowNode
 
 
 class SlidingAmpGradientNode(VisualPipeline, CNode):
@@ -38,7 +38,7 @@ class SlidingAmpGradientNode(VisualPipeline, CNode):
         self.slide_window_fraction = Element(self, "slide_window_fraction", ElementValue(slide_window_fraction))
         self.slide_min_avg_amp = LinearDial(self, "slide_min_avg_amp", 500, 3000, ElementValue(slide_min_avg_amp))
         self.slide_max_avg_amp = LinearDial(self, "slide_max_avg_amp", 2000, 5000, ElementValue(slide_max_avg_amp))
-        self.gradiant_rainbow = Element(self, "rgba", ElementValue(GradiantRainbowNode(
+        self.gradiant_rainbow = Element(self, "rgba", ElementValue(RainbowNode(
             n_points=self.n_points_gradiant.value, is_child=True, inv_fraction=0.4
         )))
         self.data = Element(self, "data", ElementValue(np.zeros((FREQ_BINS, 3))))

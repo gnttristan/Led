@@ -15,7 +15,7 @@ from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNo
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual import RGBAPipelineNode
 from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
-from frontend.nodes.rainbow.gradiant_rainbow import GradiantRainbowNode
+from frontend.nodes.rainbow import RainbowNode
 from frontend.nodes.stream import StreamMicNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
 from frontend.overrides.CFlowchart import CFlowchart
@@ -150,7 +150,7 @@ def main():
         length=amplitudes_node_normalized.output_value.value.shape[-1],
     )
 
-    gradient_rainbow = GradiantRainbowNode()
+    gradient_rainbow = RainbowNode()
 
     colorize_pipeline = ColorizePipelineNode(
         input_rgb=gradient_rainbow.data,

@@ -21,12 +21,13 @@ class SmoothingNode(CNode, AudioUpdatable):
             avg_axis: int | tuple[int, ...] | None = 0,
             offset: int = 0,
             render: bool = True,
+            alias: str | None = None,
     ) -> None:
         terminals = {
             "input_value": {"io": "in"},
             "data": {"io": "out"},
         }
-        super().__init__(self.nodeName, terminals, render=render)
+        super().__init__(self.nodeName, terminals, render=render, alias=alias)
 
         self.input_value = Element(self, "input_value", ElementValue(input_value))
         self.avg_axis = avg_axis
@@ -35,7 +36,7 @@ class SmoothingNode(CNode, AudioUpdatable):
         self.window = Element(
             self,
             "window",
-            WindowNode(input_data=self.input_value, length=self.length.value, offset=offset, render=render, is_child=True),
+            WindowNode(input_data=self.input_value, length=self.length.value, offset=offset, render=False, is_child=True),
         )
 
         window_function = Element(self, "window_function",

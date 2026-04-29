@@ -1,5 +1,17 @@
 from pyqtgraph.flowchart import registerNodeType
 
+from frontend.nodes.features import (
+    ChromaPrismNode,
+    CrestFactorNode,
+    EntropyNode,
+    MidSideEnergyNode,
+    OnsetStrengthNode,
+    PitchClassChromaNode,
+    SpectralCentroidNode,
+    SpectralFluxNode,
+    ZeroCrossingRateNode,
+)
+from frontend.group_nodes import KickDecayNode
 from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.amplitudes.freqscaled_amplitude_transformer_node import FreqScaledAmplitudesTransformerNode
@@ -12,8 +24,9 @@ from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNo
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
-from frontend.nodes.rainbow import GradiantRainbowNode
+from frontend.nodes.rainbow import GradiantNode, RainbowNode
 from frontend.nodes.buffer import BufferNode
+from frontend.nodes.group_node import GroupNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
 from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
 from frontend.nodes.stream import StreamPlayerNode, StreamMicNode
@@ -28,7 +41,9 @@ from frontend.nodes.windows_fcts.averaged_window_fct import AveragedWindowFct
 from frontend.nodes.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct
 
 nodes = [
+    KickDecayNode,
     BufferNode,
+    GroupNode,
     ConstantArrayNode,
     SingleColorNode,
     SinArrayNode,
@@ -38,13 +53,23 @@ nodes = [
     HighFilterPipelineNode,
     BandFilterPipelineNode,
     RMSPipelineNode,
+    MidSideEnergyNode,
+    ZeroCrossingRateNode,
+    CrestFactorNode,
+    EntropyNode,
+    SpectralFluxNode,
+    OnsetStrengthNode,
+    SpectralCentroidNode,
+    PitchClassChromaNode,
+    ChromaPrismNode,
     WindowNode,
     AveragedWindowFct,
     DecreasingAvgWindowFct,
     SpectrogramChartNode,
     BarGraphChartNode,
     LineChartNode,
-    GradiantRainbowNode,
+    RainbowNode,
+    GradiantNode,
     ColorizePipelineNode,
     RollingNode,
     ValueTransformerPipelineNode,

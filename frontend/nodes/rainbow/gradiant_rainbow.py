@@ -11,8 +11,8 @@ from frontend.enums.gradiant.gradiant_mode import GradiantMode
 from frontend.overrides.CNode import CNode
 
 
-class GradiantRainbowNode(Rainbow, CNode):
-    nodeName = "GradiantRainbow"
+class RainbowNode(Rainbow, CNode):
+    nodeName = "Rainbow"
 
     def __init__(
             self,
@@ -68,3 +68,6 @@ class GradiantRainbowNode(Rainbow, CNode):
             self.data.value[:] = np.concatenate(((x:=rainbow_rgb[::2]), x[::-1]))
             return
         self.data.value[:] = rainbow_rgb
+
+
+GradiantRainbowNode = RainbowNode
