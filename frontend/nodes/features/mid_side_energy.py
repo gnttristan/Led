@@ -1,0 +1,39 @@
+import numpy as np
+
+from backend.pipelines.pipeline import AudioPipeline
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
+from frontend.overrides.CNode import CNode
+
+
+class MidSideEnergyNode(CNode, AudioPipeline):
+    nodeName = "MidSideEnergy"
+
+    def __init__(self, buffer_data=np.zeros(0), render: bool = True, alias: str | None = None) -> None:
+        terminals = {
+            "buffer_data": {"io": "in"},
+            "mid_energy": {"io": "out"},
+            "side_energy": {"io": "out"},
+            "data": {"io": "out"},
+        }
+        super().__init__(self.nodeName, terminals, render=render, alias=alias)
+        self.buffer_data = Element(self, "buffer_data", ElementValue(buffer_data))
+        self.mid_energy = Element(self, "mid_energy", ElementValue(np.zeros(1)))
+        self.side_energy = Element(self, "side_energy", ElementValue(np.zeros(1)))
+        self.data = Element(self, "data", ElementValue(np.zeros(2)))
+
+    def c_update(self):
+        data = np.asarray(self.buffer_data.value, dtype=float)
+        if data.size == 0:
+            left = right = np.zeros(0)
+        elif data.ndim == 1 or data.shape[-1] < 2:
+            left = right = data.reshape(-1)
+        else:
+            left = data[..., 0].reshape(-1)
+            right = data[..., 1].reshape(-1)
+
+        mid = (left + right) * 0.5
+        side = (left - right) * 0.5
+        self.mid_energy.value[...] = np.mean(mid ** 2) if mid.size else 0.0
+        self.side_energy.value[...] = np.mean(side ** 2) if side.size else 0.0
+        self.data.value[:] = [self.mid_energy.value[0], self.side_energy.value[0]]

@@ -1,0 +1,64 @@
+import numpy as np
+
+from backend.updatable.updatable import VisualUpdatable
+from config import FREQ_BINS
+from frontend.components.elements.bar_graph_chart import BarGraphChartElement
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
+from frontend.overrides.CNode import CNode
+
+
+class BarGraphChartNode(CNode, VisualUpdatable):
+    nodeName = "BarGraphChart"
+
+    def __init__(
+        self,
+        data: np.ndarray = np.zeros(FREQ_BINS),
+        title: str = "Title",
+        number_points: int = FREQ_BINS,
+        left_label: str = "Left label",
+        bottom_label: str = "Bottom label",
+        brushes: np.ndarray | object = np.zeros((FREQ_BINS, 4)),
+        y_min: int | float = 0.0,
+        y_max: int | float = 90.0,
+        render: bool = True,
+        alias: str | None = None,
+    ) -> None:
+        terminals = {
+            "brushes": {"io": "in"},
+            "data": {"io": "in"},
+        }
+        self.title = ElementValue(title)
+        super().__init__(node_name=self.nodeName, terminals=terminals, render=render, alias=alias)
+
+        self.number_points = Element(self, "number_points", ElementValue(number_points))
+        self.brushes = Element(self, "brushes", ElementValue(brushes))
+        self.left_label = Element(self, "left_label", ElementValue(left_label))
+        self.bottom_label = Element(self, "bottom_label", ElementValue(bottom_label))
+        self.y_min = Element(self, "y_min", ElementValue(y_min))
+        self.y_max = Element(self, "y_max", ElementValue(y_max))
+        self.data = Element(self, "data", ElementValue(data))
+        self.chart = BarGraphChartElement(
+            self,
+            "chart",
+            data=self.data.value,
+            number_points=self.number_points.value,
+            left_label=self.left_label.value,
+            bottom_label=self.bottom_label.value,
+            brushes=self.brushes.value,
+            y_min=self.y_min.value,
+            y_max=self.y_max.value,
+            title=self.title.value,
+            link_terminal=False,
+            register_in_node=True,
+        )
+        if render:
+            self.draw()
+            self.chart.chart_button.setChecked(True)
+
+    def draw(self):
+        return self.chart.draw()
+
+    def c_update(self):
+        return self.chart.c_update()
+

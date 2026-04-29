@@ -1,0 +1,39 @@
+import numpy as np
+
+from backend.pipelines.pipeline import AudioPipeline
+from config import FREQ_BINS
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
+from frontend.overrides.CNode import CNode
+
+
+class SpectralCentroidNode(CNode, AudioPipeline):
+    nodeName = "SpectralCentroid"
+
+    def __init__(
+        self,
+        amplitudes=np.zeros(FREQ_BINS),
+        frequencies=np.zeros(FREQ_BINS),
+        render: bool = True,
+        alias: str | None = None,
+    ) -> None:
+        terminals = {
+            "amplitudes": {"io": "in"},
+            "frequencies": {"io": "in"},
+            "data": {"io": "out"},
+        }
+        super().__init__(self.nodeName, terminals, render=render, alias=alias)
+        self.amplitudes = Element(self, "amplitudes", ElementValue(amplitudes))
+        self.frequencies = Element(self, "frequencies", ElementValue(frequencies))
+        self.data = Element(self, "data", ElementValue(np.zeros(1)))
+
+    def c_update(self):
+        amplitudes = np.maximum(np.asarray(self.amplitudes.value, dtype=float).reshape(-1), 0.0)
+        frequencies = np.asarray(self.frequencies.value, dtype=float).reshape(-1)
+        size = min(amplitudes.size, frequencies.size)
+        if size == 0:
+            self.data.value[...] = 0.0
+            return
+        amplitudes = amplitudes[:size]
+        frequencies = frequencies[:size]
+        self.data.value[...] = np.sum(frequencies * amplitudes) / (np.sum(amplitudes) + 1e-12)
