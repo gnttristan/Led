@@ -5,7 +5,7 @@ import sys
 import select
 
 LED_REPEAT = 1
-LED_COUNT = 100
+LED_COUNT = 300
 LED_PIN = 0
 
 np = neopixel.NeoPixel(machine.Pin(0), LED_COUNT)

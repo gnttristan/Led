@@ -1,5 +1,6 @@
 from pyqtgraph.flowchart import registerNodeType
 
+from frontend.nodes.external import ESP32Node
 from frontend.nodes.features import (
     ChromaPrismNode,
     CrestFactorNode,
@@ -11,6 +12,7 @@ from frontend.nodes.features import (
     SpectralFluxNode,
     ZeroCrossingRateNode,
 )
+from frontend.nodes.function import FunctionNode
 from frontend.group_nodes import KickDecayNode
 from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
@@ -22,11 +24,12 @@ from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelin
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode, RGBPPipelineNode, RollingNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow import GradiantNode, RainbowNode
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.group_node import GroupNode
+from frontend.nodes.routing_node import RoutingNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
 from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
 from frontend.nodes.stream import StreamPlayerNode, StreamMicNode
@@ -38,13 +41,18 @@ from frontend.nodes.pipelines.visual import SingleColorNode
 from frontend.nodes.simple.sin_array import SinArrayNode
 from frontend.nodes.window.window import WindowNode
 from frontend.nodes.windows_fcts.averaged_window_fct import AveragedWindowFct
+from frontend.nodes.windows_fcts.ceil_window_fct import CeilWindowFct
 from frontend.nodes.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct
+from frontend.nodes.windows_fcts.max_window_fct import MaxWindowFct
 
 nodes = [
+    ESP32Node,
     KickDecayNode,
     BufferNode,
     GroupNode,
+    RoutingNode,
     ConstantArrayNode,
+    FunctionNode,
     SingleColorNode,
     SinArrayNode,
     AmplitudesNode,
@@ -64,7 +72,9 @@ nodes = [
     ChromaPrismNode,
     WindowNode,
     AveragedWindowFct,
+    CeilWindowFct,
     DecreasingAvgWindowFct,
+    MaxWindowFct,
     SpectrogramChartNode,
     BarGraphChartNode,
     LineChartNode,
@@ -82,6 +92,7 @@ nodes = [
     StreamMicNode,
     SCPlaylistPlayer,
     RGBAPipelineNode,
+    RGBPPipelineNode,
 ]
 
 def register_nodes():

@@ -27,6 +27,7 @@ from frontend.nodes.trigger.trigger import TriggerNode
 from frontend.nodes.visual import BarGraphChartNode
 from frontend.nodes.visual.line_chart import LineChartNode
 from frontend.nodes.window.window import WindowNode
+from frontend.nodes.windows_fcts import AveragedWindowFct
 from frontend.nodes.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.overrides.CNode import CNode
@@ -69,81 +70,16 @@ def main():
         alias="amplitudes_node",
     )
 
-    amplitudes_transformer_node = LinearAmplitudesTransformerNode(
+    window_node = WindowNode(
         input_data=amplitudes_node.data,
-        correlation_offset=0.1,
-        correlation_step=0.02,
-        alias="amplitudes_transformer_node",
+        length=3,
+        alias="avg_window_node",
     )
 
-    amplitudes_node_normalized = ValueTransformerPipelineNode(
-        input_value=amplitudes_transformer_node.data,
-        input_value_interval=[0, 7],
-        output_value_interval=[0, 1],
-        alias="amplitudes_node_normalized",
-    )
-
-
-    function_node = FunctionNode(
-        points=[(0, 1), (0.15, 0), (0.5, 1), (0.85, 0), (1, 1)]
-    )
-
-    broadcast_indexes_node = BroadcastIndexesNode(
-        input_data=amplitudes_node_normalized.output_value,
-        indexes=function_node.data.value,
-        alias="broadcast_node",
-    )
-
-    amplitudes_to_alpha = ValueTransformerPipelineNode(
-        input_value=broadcast_indexes_node.data,
-        input_value_interval=[0, 1],
-        output_value_interval=[0, 255],
-        alias="amplitudes_to_alpha",
-    )
-
-    gradiant_node = GradiantNode(
-        color_in=(200, 50, 50),
-        color_out=(0, 0, 0),
-        n_points=100,
-        alias="gradiant_node",
-    )
-
-    kick_decay_node = KickDecayNode(
-        buffer_data=buffer_node.data,
-        lowpass_freq=300,
-        threshold=0.3,
-        decay_length=5,
-        alias="kick_decay_node",
-    )
-
-    broadcast_fraction_node = BroadcastFractionNode(
-        input_data=gradiant_node.data,
-        fraction=0.01,
-        interval_input=(0, 1),
-        input=kick_decay_node.data,
-        alias="broadcast_fraction_node",
-    )
-
-    broadcast_rescaler_node = BroadcastRescalerNode(
-        input_data=broadcast_fraction_node.data,
-        length=broadcast_indexes_node.data.value.shape[-1],
-        alias="broadcast_rescaler_node",
-    )
-
-    rgba_pipeline_node = RGBAPipelineNode(
-        rgb=broadcast_rescaler_node.data,
-        alpha=amplitudes_to_alpha.output_value,
-    )
-
-    spectogram_chart_node = BarGraphChartNode(
-        data=np.ones(broadcast_indexes_node.data.value.shape[-1]),
-        title="Amplitudes",
-        number_points=amplitudes_node.data.value.shape[0],
-        left_label="Frequency",
-        bottom_label="Amplitude",
-        brushes=rgba_pipeline_node.rgba,
-        y_min=0,
-        y_max=1,
+    avg_window_node = AveragedWindowFct(
+        window=window_node,
+        avg_axis=0,
+        alias="avg_window_node",
     )
 
     flowchart = CFlowchart(

@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 from backend.rainbow.config import RAINBOW_INV_FRACTION
 from backend.rainbow.rainbow import Rainbow
 from frontend.components.elements.color_picker import ColorPicker

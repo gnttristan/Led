@@ -6,7 +6,7 @@ from config import DELAY_UPDATE, SAMPLE_RATE
 from frontend.enums.gradiant.gradiant_mode import GradiantMode
 from frontend.group_nodes import KickDecayNode
 from frontend.nodes.features import CrestFactorNode, OnsetStrengthNode
-from frontend.nodes.function.outbounds_up_fct import OutboundsUpFctNode
+from frontend.nodes.function.outbounds_fct import OutboundsFctNode
 from frontend.nodes.pipelines.amplitudes.freqscaled_amplitude_transformer_node import \
     FreqScaledAmplitudesTransformerNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
@@ -87,8 +87,8 @@ def main():
         alias="kick_decay_node",
     )
 
-    outbounds_up_fct = OutboundsUpFctNode(
-        y=kick_decay_node.data,
+    outbounds_up_fct = OutboundsFctNode(
+        y_outbound=kick_decay_node.data,
         alias="outbounds_up_fct",
     )
 

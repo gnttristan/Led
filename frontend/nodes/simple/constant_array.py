@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.overrides.CNode import CNode
@@ -30,4 +30,4 @@ class ConstantArrayNode(CNode):
         self._refresh_data()
 
     def _refresh_data(self, *_args) -> None:
-        self.data.value = np.repeat(float(self.input_value.value), int(self.length.value))
+        self.data.value = np.repeat(self.input_value.value, int(self.length.value))

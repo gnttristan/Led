@@ -3,14 +3,13 @@ import sys
 from PyQt5 import QtCore, QtWidgets
 
 from config import DELAY_UPDATE, SAMPLE_RATE
-from frontend.nodes.pipelines.amplitudes.freqscaled_amplitude_transformer_node import \
-    FreqScaledAmplitudesTransformerNode
+from frontend.nodes.external import ESP32Node
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
+from frontend.nodes.pipelines.visual import RGBPPipelineNode, RollingNode
 from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
@@ -103,16 +102,17 @@ def main():
         alias="rms_lowpass_transformed",
     )
 
-    amplitudes_transformer_node = FreqScaledAmplitudesTransformerNode(
+    amplitudes_transformer_node = LinearAmplitudesTransformerNode(
         input_data=amplitudes_node.data,
+        correlation_offset=0.01,
+        correlation_step=0.005,
         alias="amplitudes_transformer_node",
     )
 
     amplitudes_node_normalized = ValueTransformerPipelineNode(
         input_value=amplitudes_transformer_node.data,
-        input_value_interval=[0, 6],
+        input_value_interval=[0, 7],
         output_value_interval=[0, 1],
-        power=0.8,
         alias="amplitudes_node_normalized",
     )
 
@@ -151,11 +151,16 @@ def main():
         alias="amplitudes_to_alpha",
     )
 
-    rgba_pipeline = RGBAPipelineNode(
+    rgbp_pipeline = RGBPPipelineNode(
         rgb=colorize_pipeline.output_rgb,
         alpha=amplitudes_to_alpha.output_value,
-        alias="rgba_pipeline",
+        alias="rgbp_pipeline",
     )
+
+    # esp32_node = ESP32Node(
+    #     rgb=rgbp_pipeline.output_rgb,
+    #     alias="esp32_node",
+    # )
 
     constant_array_one = ConstantArrayNode(
         input_value=1,
@@ -168,7 +173,7 @@ def main():
         number_points=amplitudes_node.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
-        brushes=rgba_pipeline.rgba,
+        brushes=rgbp_pipeline.output_rgb,
         y_min=0,
         y_max=1,
     )

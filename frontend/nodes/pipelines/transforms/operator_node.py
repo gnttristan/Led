@@ -7,12 +7,13 @@ from backend.pipelines.pipeline import AudioPipeline
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.components.elements.node_selector.node_selector import NodeSelector
+from frontend.components.elements.operator.operator import Operator
 from frontend.components.elements.textedit.textedit import TextEdit
 from frontend.overrides.CNode import CNode
 
 class OperatorPipelineNode(CNode, AudioPipeline):
     nodeName = "OperatorPipeline"
-    # operations_allowed = ["+", "-", "*", "/"]
+    operations_string = ['(', '+', '-', '*', '**', '/', ')', '<', '<=', '=>', '>']
     successMessage = lambda self, v: f"Operation compiled with success, Value : {v}"
     errorMessage = lambda self, e: f"Operation compile failed: {e}"
 
@@ -113,6 +114,9 @@ class OperatorPipelineNode(CNode, AudioPipeline):
                     ElementValue(arg),
                     selection_nodes=self.get_flowchart_visible_nodes
                 )
+            elif isinstance(arg, str) and arg in self.operations_string:
+                element = Operator(self, name, ElementValue(arg))
+                element.operator_combobox.currentTextChanged.connect(self.build_evaluation_arguments)
             elif isinstance(arg, str):
                 element = TextEdit(self, name, ElementValue(arg))
                 element.text_edit.textEdited.connect(self.build_evaluation_arguments)

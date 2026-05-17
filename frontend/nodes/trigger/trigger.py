@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue

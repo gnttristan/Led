@@ -80,8 +80,6 @@ class GroupNode(CNode):
             item = node.graphicsItem()
             if item.scene() is None:
                 view_box.addItem(item)
-                if hasattr(node, "init_all"):
-                    node.init_all()
             item.show()
         self._layout_internal_nodes()
 
@@ -128,22 +126,15 @@ class GroupNode(CNode):
         return rect.adjusted(-x_padding, -y_padding, x_padding, y_padding)
 
     def _resolved_nodes(self):
-        resolved = []
-        for node in self.nodes:
-            if not isinstance(node, str) and node is not None and hasattr(node, "graphicsItem"):
-                resolved.append(node)
-        return resolved
+        return [node for node in self.nodes if isinstance(node, CNode)]
 
     def draw(self):
         windows = []
         for node in self._resolved_nodes():
-            draw = getattr(node, "draw", None)
-            if callable(draw):
-                windows.append(draw())
+            if callable(getattr(node, "draw", None)):
+                windows.append(node.draw())
         return windows[-1] if windows else None
 
     def start(self):
         for node in self.auto_start_nodes:
-            start = getattr(node, "start", None)
-            if callable(start):
-                start()
+            node.start()

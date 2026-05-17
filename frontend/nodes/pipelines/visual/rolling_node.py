@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.config import FREQ_BINS
+from config import FREQ_BINS
 from backend.pipelines.pipeline import VisualPipeline
 from backend.rainbow.config import ROLL_SPEED
 from frontend.components.elements.dials import LinearDial

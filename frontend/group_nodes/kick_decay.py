@@ -37,9 +37,10 @@ class KickDecayNode(GroupNode):
         )
 
         self.buffer_data = Element(self, "buffer_data", ElementValue(buffer_data))
+        self.decay_length = Element(self, "decay_length", ElementValue(decay_length))
 
         self.low_filter_node = LowFilterPipelineNode(
-            buffer_data=self.buffer_data,
+            buffer_data=buffer_data,
             lowpass_freq=lowpass_freq,
             render=render,
             alias=f"{self.alias}_low_filter",
@@ -69,7 +70,7 @@ class KickDecayNode(GroupNode):
             alias=f"{self.alias}_window_function",
         )
 
-        self.data = Element(self, "data", ElementValue(lambda: self.window_function.data.value))
+        self.data = Element(self, "data", ElementValue(self.window_function.data))
         self.nodes = [
             self.low_filter_node,
             self.rms_node,

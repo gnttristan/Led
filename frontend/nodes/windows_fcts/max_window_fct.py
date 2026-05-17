@@ -6,24 +6,25 @@ from frontend.components.elements.element_value import ElementValue
 from frontend.overrides.CNode import CNode
 
 
-class AveragedWindowFct(WindowFct, CNode):
-    nodeName = "AveragedWindowFct"
+class MaxWindowFct(WindowFct, CNode):
+    nodeName = "MaxWindowFct"
 
     def __init__(
         self,
         window: CNode,
         avg_axis: int | tuple[int, ...] | None = None,
         render: bool = True,
-        is_child: bool = False,
         alias: str | None = None,
+        is_child: bool = False,
     ) -> None:
         terminals = {
             "data": {"io": "out"}
         }
+        CNode.__init__(self, self.nodeName, terminals=terminals, render=render, alias=alias, is_child=is_child)
         WindowFct.__init__(self, window, self.aggregate)
-        CNode.__init__(self, self.nodeName, terminals=terminals, render=render, is_child=is_child, alias=alias)
-        self.window = Element(self, "window", ElementValue(window))
+        self.window = window
         self.avg_axis = Element(self, "avg_axis", ElementValue(avg_axis))
+        self.data = Element(self, "data", ElementValue(np.zeros(window.data.value.shape[-1])))
 
     def aggregate(self, window_data):
-        self.data = np.mean(window_data, axis=self.avg_axis.value)
+        self.data.value[...] = np.max(window_data, axis=self.avg_axis.value)

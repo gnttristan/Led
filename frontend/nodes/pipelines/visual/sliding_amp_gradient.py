@@ -20,6 +20,7 @@ class SlidingAmpGradientNode(VisualPipeline, CNode):
         slide_min_avg_amp: int | float = 500,
         slide_max_avg_amp: int | float = 2500,
         render: bool = True,
+        alias: str | None = None,
     ) -> None:
         terminals = {
             "input_frequencies": {"io": "in"},
@@ -27,7 +28,7 @@ class SlidingAmpGradientNode(VisualPipeline, CNode):
             "data": {"io": "out"},
         }
         VisualPipeline.__init__(self)
-        CNode.__init__(self, node_name=self.nodeName, terminals=terminals, render=render)
+        CNode.__init__(self, node_name=self.nodeName, terminals=terminals, render=render, alias=alias)
 
         self.n_points_output = Element(self, "n_points_output", input_amplitudes.value.shape[0])
         self.n_points_gradiant = Element(self, "n_points_gradiant", ElementValue(
@@ -38,11 +39,11 @@ class SlidingAmpGradientNode(VisualPipeline, CNode):
         self.slide_window_fraction = Element(self, "slide_window_fraction", ElementValue(slide_window_fraction))
         self.slide_min_avg_amp = LinearDial(self, "slide_min_avg_amp", 500, 3000, ElementValue(slide_min_avg_amp))
         self.slide_max_avg_amp = LinearDial(self, "slide_max_avg_amp", 2000, 5000, ElementValue(slide_max_avg_amp))
-        self.gradiant_rainbow = Element(self, "rgba", ElementValue(RainbowNode(
+        self.gradiant_rainbow = Element(self, "gradiant_rainbow", ElementValue(RainbowNode(
             n_points=self.n_points_gradiant.value, is_child=True, inv_fraction=0.4
         )))
         self.data = Element(self, "data", ElementValue(np.zeros((FREQ_BINS, 3))))
-        self.avg_amplitudes = Element(self, "data", ElementValue(0.))
+        self.avg_amplitudes = Element(self, "avg_amplitudes", ElementValue(0.))
 
     def c_update(self):
         self.avg_amplitudes = np.sum((self.input_amplitudes.value * self.input_frequencies.value) / np.sum(self.input_amplitudes.value+1e-12))

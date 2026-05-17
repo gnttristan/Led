@@ -1,7 +1,6 @@
 import numpy as np
 
 from backend.pipelines.pipeline import AudioPipeline
-from frontend.components.elements.dials import LinearDial
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.components.elements.interval import Interval
@@ -33,7 +32,6 @@ class ValueTransformerPipelineNode(CNode, AudioPipeline):
             input_value: np.ndarray = np.zeros(1),
             output_value_interval: list[int | float] | tuple[int | float, int | float] = [0, 1],
             input_value_interval: list[int | float] | tuple[int | float, int | float] = [0, 1],
-            power: float = 1,
             render: bool = True,
             alias: str | None = None,
     ) -> None:
@@ -47,17 +45,14 @@ class ValueTransformerPipelineNode(CNode, AudioPipeline):
         self.input_value = Element(self, "input_value", ElementValue(input_value))
         self.input_value_interval = Interval(self, "input_value_interval", ElementValue(input_value_interval))
         self.output_value_interval = Interval(self, "output_value_interval", ElementValue(output_value_interval))
-        self.power = LinearDial(self, "power", 0.5, 3, ElementValue(power))
         self.output_value = Element(self, "output_value", ElementValue(
             np.zeros(self._compute_input_value_shape(self.input_value.value)))
         )
 
 
     def c_update(self):
-        updated = np.power(np.maximum(self.input_value.value, 0), self.power.value)
-
         self.output_value.value[:] = np.interp(
-            updated,
+            self.input_value.value,
             self.input_value_interval.value,
             self.output_value_interval.value
         )

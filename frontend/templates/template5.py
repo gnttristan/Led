@@ -155,7 +155,6 @@ def main():
         input_value=bass_rms_node.data,
         input_value_interval=[0.02, 0.5],
         output_value_interval=[0, 1],
-        power=0.7,
         alias="bass_drive",
     )
 

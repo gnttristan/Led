@@ -4,9 +4,13 @@ from PyQt5 import QtCore, QtWidgets
 
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from config import DELAY_UPDATE, FREQ_BINS, SAMPLE_RATE
+from frontend.enums.cut_side.cut_side_mode import CutSideMode
 from frontend.enums.gradiant.gradiant_mode import GradiantMode
+from frontend.group_nodes import KickDecayNode
 from frontend.nodes.buffer import BufferNode
+from frontend.nodes.function.outbounds_fct import OutboundsFctNode
 from frontend.nodes.pipelines import AmplitudesNode
+from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
@@ -17,6 +21,8 @@ from frontend.nodes.rainbow import RainbowNode, GradiantNode
 from frontend.nodes.simple import ConstantArrayNode, SinArrayNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.visual import BarGraphChartNode
+from frontend.nodes.window.window import WindowNode
+from frontend.nodes.windows_fcts import CeilWindowFct
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.overrides.CNode import CNode
 from frontend.registry.registry import register_nodes
@@ -57,60 +63,74 @@ def main():
         alias="amplitudes",
     )
 
-    low_filter_node = LowFilterPipelineNode(
+    transformed_amplitudes_node = LinearAmplitudesTransformerNode(
+        input_data=amplitudes_node.data,
+        correlation_offset=0.1,
+        correlation_step=0.04,
+        log=0.3
+    )
+
+    standardized_amplitudes_node = ValueTransformerPipelineNode(
+        input_value=transformed_amplitudes_node.data,
+        input_value_interval=[0, 4],
+        output_value_interval=[0, 1],
+    )
+
+    kick_decay_node = KickDecayNode(
         buffer_data=buffer_node.data,
         lowpass_freq=300,
-        alias="bass_filter",
+        threshold=0.3,
+        decay_length=30,
+        alias="kick_decay_node",
     )
 
-    bass_rms_node = RMSPipelineNode(
-        buffer_data=low_filter_node.data,
-        alias="bass_rms",
+    window_node = WindowNode(
+        input_data=kick_decay_node.data,
+        length=FREQ_BINS // kick_decay_node.window_node.length.value,
+        alias="window_node",
     )
 
-    bass_drive_node = ValueTransformerPipelineNode(
-        input_value=bass_rms_node.data,
-        input_value_interval=[0.4, 0.6],
-        output_value_interval=[0, 1],
-        alias="bass_drive",
+    ceil_window_function = CeilWindowFct(
+        window=window_node,
+        alias="ceil_window_function",
     )
 
-    tide_shape_node = SinArrayNode(
-        number_cycle=1.5,
-        center=0.5,
-        offset=0.5,
-        alias="tide_shape",
+    y_offset_value = ValueTransformerPipelineNode(
+        input_value=kick_decay_node.data,
+        input_value_interval=[0, 1],
+        output_value_interval=[-0.6, 0.6],
+        alias="y_offset_value",
     )
 
-    rolling_tide_node = RollingNode(
-        input_data=tide_shape_node.data,
-        roll_speed=5.0,
-        alias="rolling_tide",
+    tide_spike_fct = OutboundsFctNode(
+        y_outbound=-2,
+        y_center=ceil_window_function.data,
+        y_offset=y_offset_value.output_value,
+        cute_side_mode=CutSideMode.LEFT,
+        alias="tide_spike_fct",
     )
 
-    tide_alpha_source_node = OperatorPipelineNode(
+    alpha_with_tide = OperatorPipelineNode(
         arguments=[
             "(",
-            amplitudes_node.data,
+            standardized_amplitudes_node.output_value,
             "*",
-            0.55,
+            0.5,
             ")",
             "+",
             "(",
-            rolling_tide_node.data,
+            tide_spike_fct.data,
             "*",
-            bass_drive_node.output_value,
-            "*",
-            1.25,
+            0.3,
             ")",
         ],
         length=FREQ_BINS,
-        alias="tide_alpha_source",
+        alias="alpha_with_tide",
     )
 
-    tide_alpha_node = ValueTransformerPipelineNode(
-        input_value=tide_alpha_source_node.data,
-        input_value_interval=[0.0, 1.45],
+    alpha_with_tide_normalized = ValueTransformerPipelineNode(
+        input_value=alpha_with_tide.data,
+        input_value_interval=[0.0, 1],
         output_value_interval=[0.0, 255.0],
         alias="tide_alpha",
     )
@@ -123,7 +143,7 @@ def main():
 
     rgba_pipeline_node = RGBAPipelineNode(
         rgb=tide_gradient_node.data,
-        alpha=tide_alpha_node.output_value,
+        alpha=alpha_with_tide_normalized.output_value,
         alias="tide_rgba",
     )
 
