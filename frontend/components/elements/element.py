@@ -187,6 +187,7 @@ class Element(QtWidgets.QWidget):
 
         if isinstance(value, CNode):
             container = QtWidgets.QWidget()
+            value._embedded_container = container
             layout = QtWidgets.QVBoxLayout(container)
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)
@@ -232,6 +233,7 @@ class Element(QtWidgets.QWidget):
                 body.adjustSize()
                 container.adjustSize()
                 self.adjustSize()
+                value.refresh_terminal_positions()
                 self.node.refresh_terminal_positions()
                 QtCore.QTimer.singleShot(0, self.node.refresh_terminal_positions)
 
@@ -257,14 +259,40 @@ class Element(QtWidgets.QWidget):
         terminal = self.node[self.terminal_name].graphicsItem()
         terminal.label.hide()
         terminal.setZValue(100)
+        if self.node.parent is not None:
+            self.node.graphicsItem().setZValue(self.node.parent.graphicsItem().zValue() + 10)
         placeholder_geometry = self.terminal_placeholder.geometry()
-        anchor_y = title_offset + self.geometry().y() + placeholder_geometry.center().y()
-        anchor_x = inner_margin + self.geometry().x() + placeholder_geometry.x()
+
+        container = getattr(self.node, "_embedded_container", None)
+        parent_widget = self.parentWidget()
+        is_in_container = False
+        while parent_widget is not None:
+            if parent_widget is container:
+                is_in_container = True
+                break
+            parent_widget = parent_widget.parentWidget()
+        if is_in_container:
+            element_pos = self.mapTo(container, QtCore.QPoint(0, 0))
+            if self.node.parent is not None and self.node.parent._elements_container is not None:
+                element_pos += container.mapTo(self.node.parent._elements_container, QtCore.QPoint(0, 0))
+        else:
+            element_pos = self.geometry().topLeft()
+        anchor_y = title_offset + element_pos.y() + placeholder_geometry.center().y()
+        anchor_x = inner_margin + element_pos.x() + placeholder_geometry.x()
+        if self.terminal_io == "out":
+            anchor_x += placeholder_geometry.width()
+
+        if self.node.parent is not None and is_in_container:
+            anchor = self.node.graphicsItem().mapFromScene(
+                self.node.parent.graphicsItem().mapToScene(anchor_x, anchor_y)
+            )
+            anchor_x = anchor.x()
+            anchor_y = anchor.y()
 
         if self.terminal_io == "in":
             terminal.setAnchor(anchor_x, anchor_y)
         else:
-            terminal.setAnchor(anchor_x + placeholder_geometry.width(), anchor_y)
+            terminal.setAnchor(anchor_x, anchor_y)
 
     def check_value(self, placeholder_value):
         return True, None

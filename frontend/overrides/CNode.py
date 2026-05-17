@@ -45,6 +45,23 @@ class CNode(Node):
     def init_all(self):
         self.init_terminals()
         self.init_elements()
+        self.connect_position_refresh()
+
+    def connect_position_refresh(self):
+        if getattr(self, "_position_refresh_connected", False):
+            return
+        item = self.graphicsItem()
+        item.xChanged.connect(self.refresh_embedded_child_terminal_positions)
+        item.yChanged.connect(self.refresh_embedded_child_terminal_positions)
+        self._position_refresh_connected = True
+
+    def refresh_embedded_child_terminal_positions(self):
+        for element in self._live_elements():
+            value = getattr(element, "value", None)
+            child_nodes = value if isinstance(value, list) else [value]
+            for child_node in child_nodes:
+                if isinstance(child_node, CNode) and child_node.parent is self:
+                    child_node.refresh_terminal_positions()
 
     def saveState(self):
         state = super().saveState()
