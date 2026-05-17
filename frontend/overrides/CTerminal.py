@@ -4,6 +4,7 @@ from pyqtgraph.flowchart.Terminal import Terminal
 
 
 class CTerminal(Terminal):
+    _MISSING = object()
     connexion_constraints = {
         np.ndarray: lambda obj, obj2: obj.shape[-1] == obj2.shape[-1],
     }
@@ -18,20 +19,11 @@ class CTerminal(Terminal):
         raise Exception(message)
 
     def connectTo(self, term, connectionItem=None):
-        output_term, input_term = self, term
-        if self.isInput():
-            output_term, input_term = term, self
+        output_term, input_term = self._ordered_terms(term)
+        output_value = self._terminal_value(output_term)
+        input_value = self._terminal_value(input_term)
 
-        output_node = output_term.node()
-        input_node = input_term.node()
-
-        output_owner = getattr(output_node, "obj", output_node)
-        input_owner = getattr(input_node, "obj", input_node)
-
-        if hasattr(output_owner, output_term.name()) and hasattr(input_owner, input_term.name()):
-            output_value = getattr(output_owner, output_term.name()).value
-            input_value = getattr(input_owner, input_term.name()).value
-
+        if output_value is not self._MISSING and input_value is not self._MISSING:
             if not isinstance(output_value, type(input_value)):
                 self.display_error_message(
                     f"Incompatible terminal types: {type(output_value).__name__} -> {type(input_value).__name__}"
@@ -50,3 +42,16 @@ class CTerminal(Terminal):
             return None
 
         return Terminal.connectTo(self, term, connectionItem=connectionItem)
+
+    def _ordered_terms(self, term):
+        if self.isInput():
+            return term, self
+        return self, term
+
+    @staticmethod
+    def _terminal_value(term):
+        owner = getattr(term.node(), "obj", term.node())
+        element = getattr(owner, term.name(), None)
+        if element is None or not hasattr(element, "value"):
+            return CTerminal._MISSING
+        return element.value

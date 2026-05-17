@@ -129,7 +129,6 @@ def main():
     )
 
     chart_window = prism_chart_node.draw()
-    del chart_window
 
     flowchart = CFlowchart(
         terminals={

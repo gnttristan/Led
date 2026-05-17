@@ -1,14 +1,13 @@
 import inspect
 
+import networkx as nx
 from PyQt5 import QtCore
 from pyqtgraph.debug import printExc
-from pyqtgraph.flowchart.Node import Node
 from pyqtgraph.flowchart import Flowchart
-import networkx as nx
+from pyqtgraph.flowchart.Node import Node
 
 from backend.updatable.updatable import pause_updates, audio_updatable_objects, visual_updatable_objects
 from config import NODE_LAYOUT_X_GAP, NODE_LAYOUT_Y_GAP
-from frontend.components.elements.element import Element
 from frontend.components.ui.create_node_form import CreateNodeForm
 from frontend.overrides.CNode import CNode
 
@@ -38,21 +37,11 @@ class CFlowchart(Flowchart):
 
     def createNode(self, nodeType, name=None, pos=None, ctor_kwargs=None):
         needs_setup_form = name is None
-        if name is None:
-            n = 0
-            while True:
-                name = f"{nodeType}.{n}"
-                if name not in self._nodes:
-                    break
-                n += 1
+        name = name or self._next_node_name(nodeType)
+
         node_cls = self.library.getNodeType(nodeType)
-        init_kwargs = {"render": False}
-        init_kwargs.update(ctor_kwargs or {})
-        signature_parameters = inspect.signature(node_cls.__init__).parameters
-        if "alias" in signature_parameters and "alias" not in init_kwargs:
-            init_kwargs["alias"] = name
-        init_kwargs = {k: v for k, v in init_kwargs.items() if k in signature_parameters}
-        node = node_cls(**init_kwargs)
+        node = node_cls(**self._node_init_kwargs(node_cls, name, ctor_kwargs))
+
         if needs_setup_form and not self.display_create_node_form(node):
             return None
 
@@ -67,6 +56,20 @@ class CFlowchart(Flowchart):
         if callable(draw):
             QtCore.QTimer.singleShot(0, draw)
         return node
+
+    def _next_node_name(self, node_type):
+        index = 0
+        while f"{node_type}.{index}" in self._nodes:
+            index += 1
+        return f"{node_type}.{index}"
+
+    @staticmethod
+    def _node_init_kwargs(node_cls, name, ctor_kwargs=None):
+        init_kwargs = {"render": False, **(ctor_kwargs or {})}
+        signature_parameters = inspect.signature(node_cls.__init__).parameters
+        if "alias" in signature_parameters:
+            init_kwargs.setdefault("alias", name)
+        return {key: value for key, value in init_kwargs.items() if key in signature_parameters}
 
     def restoreState(self, state, clear=False):
         audio_updatable_objects.clear()
@@ -83,57 +86,22 @@ class CFlowchart(Flowchart):
                 progressed = False
                 next_pending = []
 
-                for n in pending_nodes:
-                    if n["name"] in self._nodes:
-                        self._nodes[n["name"]].restoreState(n["state"])
+                for node_state in pending_nodes:
+                    name = node_state["name"]
+                    if name in self._nodes:
+                        self._nodes[name].restoreState(node_state["state"])
                         progressed = True
                         continue
 
                     try:
-                        ctor_kwargs = {
-                            key: CNode.deserialize_state_value(value)
-                            for key, value in n.get("state", {}).get("ctor_kwargs", {}).items()
-                        }
-                        init_refs = n.get("state", {}).get("init_refs", {})
-                        unresolved = False
-                        for parameter_name, payload in init_refs.items():
-                            ref = payload.get("__element_ref__", {})
-                            src_node = self._nodes.get(ref.get("node_name"))
-                            element_name = ref.get("element_name")
-                            if src_node is None or not hasattr(src_node, element_name):
-                                unresolved = True
-                                break
-                            ctor_kwargs[parameter_name] = getattr(src_node, element_name)
-
-                        if unresolved:
-                            next_pending.append(n)
+                        node = self._restore_node(node_state)
+                        if node is None:
+                            next_pending.append(node_state)
                             continue
 
-                        arguments = n.get("state", {}).get("arguments")
-                        if arguments is not None:
-                            resolved_arguments = []
-                            unresolved = False
-                            for arg in arguments:
-                                if isinstance(arg, dict) and "__element_ref__" in arg:
-                                    ref = arg["__element_ref__"]
-                                    src_node = self._nodes.get(ref.get("node_name"))
-                                    element_name = ref.get("element_name")
-                                    if src_node is None or not hasattr(src_node, element_name):
-                                        unresolved = True
-                                        break
-                                    resolved_arguments.append(getattr(src_node, element_name))
-                                else:
-                                    resolved_arguments.append(CNode.deserialize_state_value(arg))
-                            if unresolved:
-                                next_pending.append(n)
-                                continue
-                            ctor_kwargs["arguments"] = resolved_arguments
-
-                        node = self.createNode(n["class"], name=n["name"], pos=n["pos"], ctor_kwargs=ctor_kwargs)
-                        node.restoreState(n["state"])
                         progressed = True
                     except Exception:
-                        printExc("Error creating node %s: (continuing anyway)" % n["name"])
+                        printExc("Error creating node %s: (continuing anyway)" % name)
                         progressed = True
 
                 if not progressed:
@@ -145,23 +113,85 @@ class CFlowchart(Flowchart):
 
             ##!! ToDo Look in depth and maybe change [#1] : preferable solution : keep Elements values Elements as
             ##!! ToDo Elements when load UI so no need to rebuild terminals here
-            for n1, t1, n2, t2 in state["connects"]:
-                try:
-                    node1 = self._nodes.get(n1)
-                    node2 = self._nodes.get(n2)
-                    if node1 is None or node2 is None:
-                        continue
-                    if t1 not in node1.terminals or t2 not in node2.terminals:
-                        continue
-                    self.connectTerminals(node1[t1], node2[t2])
-                except Exception:
-                    printExc("Error connecting terminals %s.%s - %s.%s:" % (n1, t1, n2, t2))
+            self._connect_saved_terminals(state["connects"])
         finally:
             self.blockSignals(False)
 
         self.outputChanged()
         self.sigChartLoaded.emit()
         self.sigStateChanged.emit()
+
+    def _restore_node(self, node_state):
+        ctor_kwargs = self._ctor_kwargs_from_state(node_state.get("state", {}))
+        if ctor_kwargs is None:
+            return None
+
+        node = self.createNode(
+            node_state["class"],
+            name=node_state["name"],
+            pos=node_state["pos"],
+            ctor_kwargs=ctor_kwargs,
+        )
+        node.restoreState(node_state["state"])
+        return node
+
+    def _ctor_kwargs_from_state(self, state):
+        ctor_kwargs = {
+            key: CNode.deserialize_state_value(value)
+            for key, value in state.get("ctor_kwargs", {}).items()
+        }
+
+        if not self._resolve_init_refs(ctor_kwargs, state.get("init_refs", {})):
+            return None
+
+        arguments = state.get("arguments")
+        if arguments is not None:
+            resolved_arguments = self._resolve_arguments(arguments)
+            if resolved_arguments is None:
+                return None
+            ctor_kwargs["arguments"] = resolved_arguments
+
+        return ctor_kwargs
+
+    def _resolve_init_refs(self, ctor_kwargs, init_refs):
+        for parameter_name, payload in init_refs.items():
+            element = self._resolve_element_ref(payload.get("__element_ref__", {}))
+            if element is None:
+                return False
+            ctor_kwargs[parameter_name] = element
+        return True
+
+    def _resolve_arguments(self, arguments):
+        resolved = []
+        for arg in arguments:
+            if isinstance(arg, dict) and "__element_ref__" in arg:
+                element = self._resolve_element_ref(arg["__element_ref__"])
+                if element is None:
+                    return None
+                resolved.append(element)
+            else:
+                resolved.append(CNode.deserialize_state_value(arg))
+        return resolved
+
+    def _resolve_element_ref(self, ref):
+        src_node = self._nodes.get(ref.get("node_name"))
+        element_name = ref.get("element_name")
+        if src_node is None or not hasattr(src_node, element_name):
+            return None
+        return getattr(src_node, element_name)
+
+    def _connect_saved_terminals(self, connects):
+        for n1, t1, n2, t2 in connects:
+            try:
+                node1 = self._nodes.get(n1)
+                node2 = self._nodes.get(n2)
+                if node1 is None or node2 is None:
+                    continue
+                if t1 not in node1.terminals or t2 not in node2.terminals:
+                    continue
+                self.connectTerminals(node1[t1], node2[t2])
+            except Exception:
+                printExc("Error connecting terminals %s.%s - %s.%s:" % (n1, t1, n2, t2))
 
     def add_nodes(self, nodes):
         for node in nodes:
@@ -185,6 +215,12 @@ class CFlowchart(Flowchart):
             return
 
         node_by_name = {node.name(): node for node in self.visible_nodes}
+        layers = self._layout_layers(node_by_name)
+        positions = self._layout_positions(node_by_name, layers)
+        for node_name, (x, y) in positions.items():
+            node_by_name[node_name].graphicsItem().setPos(float(x), float(y))
+
+    def _layout_layers(self, node_by_name):
         graph = nx.DiGraph()
         graph.add_nodes_from(node_by_name.keys())
 
@@ -199,20 +235,20 @@ class CFlowchart(Flowchart):
                         graph.add_edge(src_name, dst_node.name())
 
         if nx.is_directed_acyclic_graph(graph):
-            layers = [list(nodes) for nodes in nx.topological_generations(graph)]
-        else:
-            condensed = nx.condensation(graph)
-            comp_layers = list(nx.topological_generations(condensed))
-            mapping = condensed.graph["mapping"]
-            layers = []
-            for components in comp_layers:
-                layer_nodes = [
-                    node_name
-                    for node_name, component in mapping.items()
-                    if component in components
-                ]
-                layers.append(layer_nodes)
+            return [list(nodes) for nodes in nx.topological_generations(graph)]
 
+        condensed = nx.condensation(graph)
+        mapping = condensed.graph["mapping"]
+        return [
+            [
+                node_name
+                for node_name, component in mapping.items()
+                if component in components
+            ]
+            for components in nx.topological_generations(condensed)
+        ]
+
+    def _layout_positions(self, node_by_name, layers):
         x_gap = float(NODE_LAYOUT_X_GAP)
         y_gap = float(NODE_LAYOUT_Y_GAP)
         positions = {}
@@ -228,8 +264,7 @@ class CFlowchart(Flowchart):
                 y += node_height + y_gap
             x += layer_width + x_gap
 
-        for node_name, (x, y) in positions.items():
-            node_by_name[node_name].graphicsItem().setPos(float(x), float(y))
+        return positions
 
     def _layout_node_size(self, node):
         item = node.graphicsItem()
@@ -241,12 +276,9 @@ class CFlowchart(Flowchart):
         if group_nodes:
             visible_children = [child for child in group_nodes if getattr(child, "render", False)]
             if visible_children:
-                child_widths = []
-                child_heights = []
-                for child in visible_children:
-                    child_rect = child.graphicsItem().boundingRect()
-                    child_widths.append(max(float(child_rect.width()), 180.0))
-                    child_heights.append(max(float(child_rect.height()), 100.0))
+                child_sizes = [self._layout_node_size(child) for child in visible_children]
+                child_widths = [child_width for child_width, _ in child_sizes]
+                child_heights = [child_height for _, child_height in child_sizes]
                 width = max(width, sum(child_widths) + 360.0 * max(0, len(child_widths) - 1))
                 height = max(height, max(child_heights))
 

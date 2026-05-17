@@ -105,7 +105,7 @@ class Element(QtWidgets.QWidget):
 
         # HBox for elements
         self.hbox_elements = QtWidgets.QHBoxLayout()
-        self.hbox_elements.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.hbox_elements.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.hbox_elements.setContentsMargins(0, 0, 0, 0)
         self.hbox_elements.setSpacing(0)
         self.setLayout(self.hbox_elements)
@@ -129,7 +129,7 @@ class Element(QtWidgets.QWidget):
         self.hbox_elements.addWidget(name_label)
 
         # Element value
-        self.hbox_elements.addWidget(self.build_value_widget(self.value, font))
+        self.hbox_elements.addWidget(self.build_value_widget(self.value, font), alignment=Qt.AlignmentFlag.AlignTop)
         self.hbox_elements.addStretch()
 
         ##!! ToDo toChange
@@ -178,21 +178,26 @@ class Element(QtWidgets.QWidget):
     def build_value_widget(self, value, font):
         if isinstance(value, list) and any(isinstance(item, CNode) for item in value):
             container = QtWidgets.QWidget()
+            container.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
             layout = QtWidgets.QVBoxLayout(container)
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)
+            layout.setAlignment(Qt.AlignmentFlag.AlignTop)
             for item in value:
-                layout.addWidget(self.build_value_widget(item, font))
+                layout.addWidget(self.build_value_widget(item, font), alignment=Qt.AlignmentFlag.AlignTop)
             return container
 
         if isinstance(value, CNode):
             container = QtWidgets.QWidget()
+            container.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
             value._embedded_container = container
             layout = QtWidgets.QVBoxLayout(container)
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)
+            layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
             header = QtWidgets.QWidget()
+            header.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
             header_layout = QtWidgets.QHBoxLayout(header)
             header_layout.setContentsMargins(0, 0, 0, 0)
             header_layout.setSpacing(4)
@@ -211,10 +216,12 @@ class Element(QtWidgets.QWidget):
             layout.addWidget(header)
 
             body = QtWidgets.QWidget()
+            body.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
             body_layout = QtWidgets.QVBoxLayout(body)
             body_layout.setContentsMargins(0, 0, 0, 0)
             body_layout.setSpacing(0)
             body.setVisible(False)
+            body.setMaximumHeight(0)
             layout.addWidget(body)
 
             # value.render = False
@@ -224,20 +231,44 @@ class Element(QtWidgets.QWidget):
                     if body_layout.indexOf(element) == -1:
                         body_layout.addWidget(element)
 
+            def refresh_embedded_positions(delay=0):
+                def refresh():
+                    sync_child_elements()
+                    body.adjustSize()
+                    container.adjustSize()
+                    self.adjustSize()
+                    value.refresh_terminal_positions()
+                    self.node.refresh_terminal_positions()
+
+                QtCore.QTimer.singleShot(delay, refresh)
+
             def on_toggle(is_open):
                 value.render = is_open
                 toggle_button.setArrowType(QtCore.Qt.DownArrow if is_open else QtCore.Qt.RightArrow)
-                if is_open:
-                    sync_child_elements()
+                sync_child_elements()
+                body.setMaximumHeight(16777215 if is_open else 0)
                 body.setVisible(is_open)
+                refresh_embedded_positions()
+                refresh_embedded_positions(25)
+
+            toggle_button.toggled.connect(on_toggle)
+
+            def init_closed_positions():
+                body.setMaximumHeight(16777215)
+                body.setVisible(True)
+                sync_child_elements()
                 body.adjustSize()
                 container.adjustSize()
                 self.adjustSize()
                 value.refresh_terminal_positions()
-                self.node.refresh_terminal_positions()
-                QtCore.QTimer.singleShot(0, self.node.refresh_terminal_positions)
+                body.setVisible(False)
+                body.setMaximumHeight(0)
+                body.updateGeometry()
+                container.updateGeometry()
+                refresh_embedded_positions()
 
-            toggle_button.toggled.connect(on_toggle)
+            QtCore.QTimer.singleShot(0, init_closed_positions)
+            QtCore.QTimer.singleShot(25, init_closed_positions)
 
             return container
 

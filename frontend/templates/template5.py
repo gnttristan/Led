@@ -183,7 +183,6 @@ def main():
     )
 
     chart_window = tide_chart_node.draw()
-    del chart_window
 
     flowchart = CFlowchart(
         terminals={
