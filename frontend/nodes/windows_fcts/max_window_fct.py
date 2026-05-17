@@ -15,12 +15,12 @@ class MaxWindowFct(WindowFct, CNode):
         avg_axis: int | tuple[int, ...] | None = None,
         render: bool = True,
         alias: str | None = None,
-        is_child: bool = False,
+        parent: CNode | None = None,
     ) -> None:
         terminals = {
             "data": {"io": "out"}
         }
-        CNode.__init__(self, self.nodeName, terminals=terminals, render=render, alias=alias, is_child=is_child)
+        CNode.__init__(self, self.nodeName, terminals=terminals, render=render, alias=alias, parent=parent)
         WindowFct.__init__(self, window, self.aggregate)
         self.window = window
         self.avg_axis = Element(self, "avg_axis", ElementValue(avg_axis))

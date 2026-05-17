@@ -15,6 +15,7 @@ from frontend.nodes.features import (
 from frontend.nodes.function import FunctionNode
 from frontend.group_nodes import KickDecayNode
 from frontend.nodes.pipelines.amplitudes.amplitude_level_function import AmplitudesLevelFunction
+from frontend.nodes.pipelines.amplitudes.avg_frequencies import AvgFrequenciesNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.amplitudes.freqscaled_amplitude_transformer_node import FreqScaledAmplitudesTransformerNode
 from frontend.nodes.pipelines.amplitudes.fct_amplitude_transformer_node import FctAmplitudesTransformerNode
@@ -84,6 +85,7 @@ nodes = [
     RollingNode,
     ValueTransformerPipelineNode,
     OperatorPipelineNode,
+    AvgFrequenciesNode,
     LinearAmplitudesTransformerNode,
     FreqScaledAmplitudesTransformerNode,
     FctAmplitudesTransformerNode,

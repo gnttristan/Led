@@ -40,7 +40,7 @@ class SlidingAmpGradientNode(VisualPipeline, CNode):
         self.slide_min_avg_amp = LinearDial(self, "slide_min_avg_amp", 500, 3000, ElementValue(slide_min_avg_amp))
         self.slide_max_avg_amp = LinearDial(self, "slide_max_avg_amp", 2000, 5000, ElementValue(slide_max_avg_amp))
         self.gradiant_rainbow = Element(self, "gradiant_rainbow", ElementValue(RainbowNode(
-            n_points=self.n_points_gradiant.value, is_child=True, inv_fraction=0.4
+            n_points=self.n_points_gradiant.value, parent=self, inv_fraction=0.4
         )))
         self.data = Element(self, "data", ElementValue(np.zeros((FREQ_BINS, 3))))
         self.avg_amplitudes = Element(self, "avg_amplitudes", ElementValue(0.))

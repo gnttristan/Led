@@ -23,14 +23,14 @@ class RainbowNode(Rainbow, CNode):
             cycle=1,
             mode: GradiantMode = GradiantMode.LINEAR,
             render: bool = True,
-            is_child: bool = False,
+            parent: CNode | None = None,
             alias: str | None = None,
     ) -> None:
         terminals = {
             "data": {"io": "out"},
         }
 
-        CNode.__init__(self, self.nodeName, terminals=terminals, render=render, is_child=is_child, alias=alias)
+        CNode.__init__(self, self.nodeName, terminals=terminals, render=render, parent=parent, alias=alias)
 
         self.n_points = n_points
         self.inv_fraction = LinearDial(self, "inv_fraction", 0, 1, ElementValue(inv_fraction))

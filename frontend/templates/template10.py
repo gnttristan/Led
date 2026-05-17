@@ -6,6 +6,7 @@ from pyqtgraph.examples.colorMapsLinearized import length
 
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from config import DELAY_UPDATE, SAMPLE_RATE
+from frontend.components.elements.operator import Operator
 from frontend.enums.gradiant.trigger_mode import TriggerMode
 from frontend.group_nodes import KickDecayNode
 from frontend.nodes.broadcast.broadcast_fraction import BroadcastFractionNode
@@ -14,13 +15,16 @@ from frontend.nodes.broadcast.broadcast_rescaler import BroadcastRescalerNode
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.function import FunctionNode
 from frontend.nodes.pipelines import AmplitudesNode
+from frontend.nodes.pipelines.amplitudes.avg_frequencies import AvgFrequenciesNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
+from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual import SingleColorNode, RGBAPipelineNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow import GradiantNode
+from frontend.nodes.routing_node import RoutingNode
 from frontend.nodes.simple import ConstantArrayNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.trigger.trigger import TriggerNode
@@ -70,16 +74,40 @@ def main():
         alias="amplitudes_node",
     )
 
-    window_node = WindowNode(
-        input_data=amplitudes_node.data,
-        length=3,
-        alias="avg_window_node",
+    avg_frequencies = AvgFrequenciesNode(
+        input_amplitudes=amplitudes_node.data,
+        input_frequencies=amplitudes_node.frequencies,
+        alias="avg_frequencies",
     )
 
-    avg_window_node = AveragedWindowFct(
-        window=window_node,
-        avg_axis=0,
-        alias="avg_window_node",
+    between_500_and_1500 = OperatorPipelineNode(
+        arguments=[
+            500,
+            "<",
+            avg_frequencies.data,
+            "<",
+            1500
+        ],
+        alias="between_500_and_1500",
+    )
+
+    between_1500_and_2500 = OperatorPipelineNode(
+        arguments=[
+            1500,
+            "<",
+            avg_frequencies.data,
+            "<",
+            2500
+        ],
+        alias="between_1500_and_2500",
+    )
+
+    routing_node = RoutingNode(
+        operator_nodes=[
+            between_500_and_1500,
+            between_1500_and_2500,
+        ],
+        alias="routing_node",
     )
 
     flowchart = CFlowchart(

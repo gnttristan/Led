@@ -14,14 +14,14 @@ class AveragedWindowFct(WindowFct, CNode):
         window: CNode,
         avg_axis: int | tuple[int, ...] | None = None,
         render: bool = True,
-        is_child: bool = False,
+            parent: CNode | None = None,
         alias: str | None = None,
     ) -> None:
         terminals = {
             "data": {"io": "out"}
         }
         WindowFct.__init__(self, window, self.aggregate)
-        CNode.__init__(self, self.nodeName, terminals=terminals, render=render, is_child=is_child, alias=alias)
+        CNode.__init__(self, self.nodeName, terminals=terminals, render=render, parent=parent, alias=alias)
         self.window = Element(self, "window", ElementValue(window))
         self.avg_axis = Element(self, "avg_axis", ElementValue(avg_axis))
 

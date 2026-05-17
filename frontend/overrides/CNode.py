@@ -22,7 +22,7 @@ class CNode(Node):
         node_name: str,
         terminals: Mapping[str, Mapping[str, object]],
         render: bool = True,
-        is_child: bool = False,
+        parent: "CNode | None" = None,
         alias: str | None = None,
     ) -> None:
         self.node_name = node_name
@@ -32,7 +32,7 @@ class CNode(Node):
         self.pending_terminals = dict(terminals)
         self._elements_proxy = None
         self._elements_container = None
-        self.is_child = is_child
+        self.parent = parent
         self.is_initiated = False
 
         super().__init__(self.alias)
@@ -259,7 +259,9 @@ class CNode(Node):
         local_element.value = parameter.default
 
     def get_flowchart_visible_nodes(self):
-        return self.graphicsItem().getViewBox().widget.chart.visible_nodes
+        if self.parent is not None:
+            return self.parent.get_flowchart_visible_nodes()
+        return self.graphicsItem().getViewBox()
 
     def c_update(self, **kwargs):
         return {}

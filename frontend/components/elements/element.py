@@ -92,11 +92,15 @@ class Element(QtWidgets.QWidget):
         if isinstance(value, Element):
             self._value_ref = ElementValue(lambda: value.value)
             self.value = value.value
-            if self.link_terminal and not self.node.is_child:
+            if self.link_terminal and self.node.parent is None:
                 QtCore.QTimer.singleShot(0, lambda: self.connect_terminal(self, value))
         else:
             if isinstance(value, CNode):
-                self.node.is_child = True
+                value.parent = self.node
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, CNode):
+                        item.parent = self.node
             self._value = value
 
         # HBox for elements
@@ -128,7 +132,7 @@ class Element(QtWidgets.QWidget):
         self.hbox_elements.addWidget(self.build_value_widget(self.value, font))
         self.hbox_elements.addStretch()
 
-        ##!! toChange
+        ##!! ToDo toChange
         if callable(getattr(self._value_ref, "_value", None)):
             self._dynamic_label_timer = QtCore.QTimer(self)
             self._dynamic_label_timer.timeout.connect(self.refresh_value_label)
@@ -172,6 +176,15 @@ class Element(QtWidgets.QWidget):
         self.valueChanged.emit(self.value)
 
     def build_value_widget(self, value, font):
+        if isinstance(value, list) and any(isinstance(item, CNode) for item in value):
+            container = QtWidgets.QWidget()
+            layout = QtWidgets.QVBoxLayout(container)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+            for item in value:
+                layout.addWidget(self.build_value_widget(item, font))
+            return container
+
         if isinstance(value, CNode):
             container = QtWidgets.QWidget()
             layout = QtWidgets.QVBoxLayout(container)
@@ -203,7 +216,7 @@ class Element(QtWidgets.QWidget):
             body.setVisible(False)
             layout.addWidget(body)
 
-            value.render = False
+            # value.render = False
 
             def sync_child_elements():
                 for element in value.elements:

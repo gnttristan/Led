@@ -18,7 +18,7 @@ class WindowNode(CNode, AudioUpdatable):
         offset: int = 0,
         render: bool = True,
         alias: str | None = None,
-        is_child: bool = False,
+            parent: CNode | None = None,
     ) -> None:
         self.should_process = False
         terminals = {
@@ -26,7 +26,7 @@ class WindowNode(CNode, AudioUpdatable):
             "data": {"io": "out"}
         }
 
-        super().__init__(self.nodeName, terminals, render=render, alias=alias, is_child=is_child)
+        super().__init__(self.nodeName, terminals, render=render, alias=alias, parent=parent)
 
         self.length = ExpDial(self, "length", 1, 1000, ElementValue(length))
         self.input_data = Element(self, "input_data", ElementValue(input_data)) # Data to aggregate

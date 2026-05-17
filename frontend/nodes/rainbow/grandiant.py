@@ -16,13 +16,13 @@ class GradiantNode(CNode):
         color_in=(255, 0, 0),
         color_out=(0, 0, 255),
         render: bool = True,
-        is_child: bool = False,
+            parent: CNode | None = None,
         alias: str | None = None,
     ) -> None:
         terminals = {
             "data": {"io": "out"},
         }
-        super().__init__(self.nodeName, terminals=terminals, render=render, is_child=is_child, alias=alias)
+        super().__init__(self.nodeName, terminals=terminals, render=render, parent=parent, alias=alias)
 
         self.n_points = n_points
         self.color_in = ColorPicker(self, "color_in", ElementValue(color_in))
