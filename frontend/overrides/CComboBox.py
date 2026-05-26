@@ -1,9 +1,7 @@
-from PyQt5 import QtWidgets
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtWidgets
 
 
 class CComboBox(QtWidgets.QComboBox):
-    arrowClicked = QtCore.pyqtSignal()
     popupAboutToShow = QtCore.pyqtSignal()
 
     def showPopup(self):

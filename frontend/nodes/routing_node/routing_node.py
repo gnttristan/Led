@@ -1,6 +1,3 @@
-import numpy as np
-
-from config import FREQ_BINS
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.overrides.CNode import CNode

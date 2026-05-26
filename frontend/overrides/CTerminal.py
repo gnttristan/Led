@@ -5,17 +5,19 @@ from pyqtgraph.flowchart.Terminal import Terminal
 
 class CTerminal(Terminal):
     _MISSING = object()
-    connexion_constraints = {
-        np.ndarray: lambda obj, obj2: obj.shape[-1] == obj2.shape[-1],
-    }
+
+    @staticmethod
+    def is_compatible(output_value, input_value):
+        type_compatibility = {
+            np.ndarray: lambda out_v, in_v: isinstance(out_v, np.ndarray) and out_v.shape == in_v.shape,
+        }
+        return (type_compatibility.get(type(output_value),
+            lambda out_v, in_v: isinstance(out_v, type(in_v))
+        )(output_value, input_value))
 
     @staticmethod
     def display_error_message(message):
-        message_box = QtWidgets.QMessageBox()
-        message_box.setIcon(QtWidgets.QMessageBox.Icon.Critical)
-        message_box.setWindowTitle("Connection Error")
-        message_box.setText(message)
-        message_box.exec_()
+        QtWidgets.QMessageBox.critical(None, "Connection Error", message)
         raise Exception(message)
 
     def connectTo(self, term, connectionItem=None):
@@ -23,19 +25,15 @@ class CTerminal(Terminal):
         output_value = self._terminal_value(output_term)
         input_value = self._terminal_value(input_term)
 
-        if output_value is not self._MISSING and input_value is not self._MISSING:
-            if not isinstance(output_value, type(input_value)):
-                self.display_error_message(
-                    f"Incompatible terminal types: {type(output_value).__name__} -> {type(input_value).__name__}"
-                )
-                return None
-
-            # constraint = self.connexion_constraints.get(type(input_value))
-            # if constraint is not None and not constraint(input_value, output_value):
-            #     self.display_error_message(
-            #         f"Incompatible terminal values for {output_term.name()} -> {input_term.name()}"
-            #     )
-            #     return None
+        if (
+            output_value is not self._MISSING
+            and input_value is not self._MISSING
+            and not self.is_compatible(output_value, input_value)
+        ):
+            self.display_error_message(
+                f"Incompatible terminal types: {type(output_value).__name__} -> {type(input_value).__name__}"
+            )
+            return None
 
         if input_term.isConnected() and not input_term.connectedTo(output_term):
             print(f"Terminal '{input_term.name()}' is already connected")
@@ -44,14 +42,11 @@ class CTerminal(Terminal):
         return Terminal.connectTo(self, term, connectionItem=connectionItem)
 
     def _ordered_terms(self, term):
-        if self.isInput():
-            return term, self
-        return self, term
+        return (term, self) if self.isInput() else (self, term)
 
     @staticmethod
     def _terminal_value(term):
         owner = getattr(term.node(), "obj", term.node())
-        element = getattr(owner, term.name(), None)
-        if element is None or not hasattr(element, "value"):
-            return CTerminal._MISSING
-        return element.value
+        element_name = owner.terminal_element_name(term.name())
+        element = getattr(owner, element_name, CTerminal._MISSING)
+        return element.value if hasattr(element, "value") else CTerminal._MISSING

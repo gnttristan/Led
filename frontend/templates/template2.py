@@ -41,7 +41,7 @@ def main():
 
     buffer_node = BufferNode(
         indata=stream_player_node.chunk,
-        chunk_size=stream_player_node.chunk.value.shape[0],
+        chunk_size=stream_player_node.chunk.value.shape[1],
         length=analysis_chunk_size,
         alias="buffer_node",
     )
@@ -77,7 +77,7 @@ def main():
     rms_transformed = ValueTransformerPipelineNode(
         input_value=rms_node.data,
         input_value_interval=[0, 0.6],
-        output_value_interval=[0, 1.8],
+        output_value_interval=[0, 1.5],
         alias="rms_transformed",
     )
     rms_lowpass_node = RMSPipelineNode(
@@ -97,22 +97,22 @@ def main():
 
     rms_lowpass_transformed = ValueTransformerPipelineNode(
         input_value=rms_lowpass_node.data,
-        input_value_interval=[0.2, 0.5],
-        output_value_interval=[0, 1],
+        input_value_interval=[0.2, 0.8],
+        output_value_interval=[0, 0.5],
         alias="rms_lowpass_transformed",
     )
 
-    amplitudes_transformer_node = LinearAmplitudesTransformerNode(
-        input_data=amplitudes_node.data,
-        correlation_offset=0.01,
-        correlation_step=0.005,
-        alias="amplitudes_transformer_node",
-    )
+    # amplitudes_transformer_node = LinearAmplitudesTransformerNode(
+    #     input_data=amplitudes_node.data,
+    #     correlation_offset=0.01,
+    #     correlation_step=0.005,
+    #     alias="amplitudes_transformer_node",
+    # )
 
     amplitudes_node_normalized = ValueTransformerPipelineNode(
-        input_value=amplitudes_transformer_node.data,
-        input_value_interval=[0, 7],
-        output_value_interval=[0, 1],
+        input_value=amplitudes_node.data,
+        input_value_interval=[0, 1],
+        output_value_interval=[0, 0.8],
         alias="amplitudes_node_normalized",
     )
 

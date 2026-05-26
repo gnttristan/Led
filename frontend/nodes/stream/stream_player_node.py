@@ -37,7 +37,7 @@ class StreamPlayerNode(CNode, AudioUpdatable):
         self.enqueue_token = Element(self, "enqueue_token", ElementValue(enqueue_token))
         self.sample_rate = Element(self, "sample_rate", ElementValue(sample_rate))
         self.chunk_size = Element(self, "chunk_size", ElementValue(chunk_size))
-        self.chunk = Element(self, "chunk", ElementValue(np.zeros(chunk_size, dtype=np.float32)))
+        self.chunk = Element(self, "chunk", ElementValue(np.zeros((2, chunk_size), dtype=np.float32)))
         self.user_callback = user_callback
         self._last_enqueue_token = int(self.enqueue_token.value)
 
@@ -50,7 +50,6 @@ class StreamPlayerNode(CNode, AudioUpdatable):
 
     def enqueue(self, audio, sr):
         arr = np.asarray(audio, dtype=np.float32)
-        arr = arr[:, None] if arr.ndim == 1 else arr
         with self._lock:
             if self._audio.shape[0] == 0:
                 self.sample_rate.value = int(sr)
@@ -73,14 +72,13 @@ class StreamPlayerNode(CNode, AudioUpdatable):
             outdata[:] = 0
             if take > 0:
                 outdata[:take] = self._audio[self._cursor:end]
-                block = outdata[:take]
-                mono = np.mean(block, axis=1)
-                chunk_len = self.chunk.value.shape[0]
-                if mono.shape[0] < chunk_len:
-                    mono = np.pad(mono, (0, chunk_len - mono.shape[0]))
-                elif mono.shape[0] > chunk_len:
-                    mono = mono[:chunk_len]
-                self.chunk.value[:] = mono
+                block = outdata[:take].T
+                chunk_len = self.chunk.value.shape[1]
+                if block.shape[1] < chunk_len:
+                    block = np.pad(block, ((0, 0), (0, chunk_len - block.shape[1])))
+                elif block.shape[1] > chunk_len:
+                    block = block[:, :chunk_len]
+                self.chunk.value[:] = block
             self._cursor = end
 
         if self.user_callback:
@@ -94,7 +92,7 @@ class StreamPlayerNode(CNode, AudioUpdatable):
             samplerate=int(self.sample_rate.value),
             channels=2,
             dtype="float32",
-            blocksize=int(self.chunk.value.shape[0]),
+            blocksize=int(self.chunk.value.shape[1]),
         )
         self._stream.start()
         self._running = True
@@ -111,7 +109,6 @@ class StreamPlayerNode(CNode, AudioUpdatable):
         if token != self._last_enqueue_token:
             self.stop()
             arr = np.asarray(self.audio_in.value, dtype=np.float32)
-            arr = arr[:, None] if arr.ndim == 1 else arr
             with self._lock:
                 self._audio = np.zeros((0, 2), dtype=np.float32)
                 self._song_ends = []

@@ -17,18 +17,19 @@ class OperatorPipelineNode(CNode, AudioPipeline):
     successMessage = lambda self, v: f"Operation compiled with success, Value : {v}"
     errorMessage = lambda self, e: f"Operation compile failed: {e}"
 
-    def __init__(self, arguments: list[object] = [], length: int = 0, render: bool = True, alias: str | None = None) -> None:
+    def __init__(self, arguments: list[object] = [], length: int = 0, render: bool = True, parent=None, alias: str | None = None) -> None:
         self.terminals_dict = {
             "data": {"io": "out"}
         }
 
         self.length = length
         self.arguments = arguments
+        self.terminal_element_names = {}
         self.operation_element_names = [self.resolve_element_name(arg) for arg in arguments]
 
         self.update_terminal()
 
-        super().__init__(node_name=self.nodeName, terminals=self.terminals_dict.copy(), render=render, alias=alias)
+        super().__init__(node_name=self.nodeName, terminals=self.terminals_dict.copy(), render=render, parent=parent, alias=alias)
 
         self.operation_elements = self.define_operation_elements(arguments)
         self.built_evaluation = None
@@ -47,7 +48,10 @@ class OperatorPipelineNode(CNode, AudioPipeline):
         ##!! When the elements argument is being edited, we should skip here
         self.build_evaluation_arguments()
         try:
-            self.data.value[:] = self.evaluate_arguments()
+            if self.data.value.dtype != self.evaluate_arguments().dtype:
+                self.data.value = np.asarray((ea:=self.evaluate_arguments()), dtype=ea.dtype)
+            else:
+                self.data.value[:] = self.evaluate_arguments()
             self.operation_state_label.setText(self.successMessage(Element.format_value(self.data.value)))
         except Exception as e:
             self.operation_state_label.setText(self.errorMessage(e))
@@ -89,7 +93,10 @@ class OperatorPipelineNode(CNode, AudioPipeline):
 
 
     def evaluate_arguments(self):
-        return eval(self.built_evaluation)
+        result = eval(self.built_evaluation)
+        if isinstance(result, bool):
+            return np.array([result])
+        return result
 
     def update_terminal(self):
         args_elements_indexes = list(map(
@@ -99,9 +106,15 @@ class OperatorPipelineNode(CNode, AudioPipeline):
             )
         ))
         for arg_element_index in args_elements_indexes:
-            self.terminals_dict[self.operation_element_names[arg_element_index]] = {"io": "in"}
+            terminal_name = self.operation_element_names[arg_element_index]
+            self.terminals_dict[terminal_name] = {"io": "in"}
+            self.terminals_dict[f"{terminal_name}_out"] = {"io": "out"}
+            self.terminal_element_names[f"{terminal_name}_out"] = terminal_name
         self.pending_terminals = dict(self.terminals_dict)
         # self.init_terminals()
+
+    def terminal_element_name(self, terminal_name):
+        return self.terminal_element_names.get(terminal_name, terminal_name)
 
     def define_operation_elements(self, arguments):
         elements = []

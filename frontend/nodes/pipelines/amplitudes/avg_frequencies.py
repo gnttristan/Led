@@ -1,12 +1,13 @@
 import numpy as np
 
+from backend.updatable.updatable import AudioUpdatable
 from config import FREQ_BINS
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.overrides.CNode import CNode
 
 
-class AvgFrequenciesNode(CNode):
+class AvgFrequenciesNode(CNode, AudioUpdatable):
     nodeName = "AvgFrequencies"
 
     def __init__(

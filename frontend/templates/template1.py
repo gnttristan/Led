@@ -48,7 +48,7 @@ def main():
 
     buffer_node = BufferNode(
         indata=stream_player_node.chunk,
-        chunk_size=stream_player_node.chunk.value.shape[0],
+        chunk_size=stream_player_node.chunk.value.shape[1],
         length=analysis_chunk_size,
         alias="buffer_node",
     )

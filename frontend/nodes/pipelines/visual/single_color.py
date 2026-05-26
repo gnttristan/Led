@@ -24,6 +24,7 @@ class SingleColorNode(CNode):
         }
         super().__init__(self.nodeName, terminals, render=render, alias=alias)
 
+
         self.color = ColorPicker(self, "color", ElementValue(color))
         self.number_points = Element(self, "number_points", ElementValue(number_points))
         self.data = Element(self, "data", ElementValue(np.zeros((int(self.number_points.value), 3), dtype=np.uint8)))

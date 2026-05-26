@@ -22,6 +22,8 @@ class LinearAmplitudesTransformerNode(CNode, AmplitudesTransformer):
     ) -> None:
         terminals = {
             "input_data": {"io": "in"},
+            "correlation_offset": {"io": "in"},
+            "correlation_step": {"io": "in"},
             "data": {"io": "out"},
         }
 
@@ -35,19 +37,26 @@ class LinearAmplitudesTransformerNode(CNode, AmplitudesTransformer):
         self.log = Element(self, "log", ElementValue(log))
         self.data = Element(self, "data", ElementValue(np.zeros(FREQ_BINS)))
 
+    @staticmethod
+    def _scalar(value):
+        if value is None:
+            return None
+        return float(np.asarray(value).reshape(-1)[0])
+
     def c_update(self):
         self.transform_amplitudes(self.input_data.value)
 
     def transform_amplitudes(self, data):
         updated_amplitudes = data
-        if self.correlation_offset.value is not None and self.correlation_step.value is not None:
+        correlation_offset = self._scalar(self.correlation_offset.value)
+        correlation_step = self._scalar(self.correlation_step.value)
+        if correlation_offset is not None and correlation_step is not None:
             updated_amplitudes = np.correlate(
                 updated_amplitudes,
                 np.concatenate(
                     (
-                        np.arange(1 - self.correlation_offset.value, 1, self.correlation_step.value),
-                        np.arange(1, 1 - self.correlation_offset.value - self.correlation_step.value,
-                                  - self.correlation_step.value)
+                        np.arange(1 - correlation_offset, 1, correlation_step),
+                        np.arange(1, 1 - correlation_offset - correlation_step, -correlation_step)
                     )
                 ),
                 mode="same"

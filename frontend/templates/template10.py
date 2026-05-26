@@ -5,7 +5,7 @@ from PyQt5 import QtCore, QtWidgets
 from pyqtgraph.examples.colorMapsLinearized import length
 
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
-from config import DELAY_UPDATE, SAMPLE_RATE
+from config import DELAY_UPDATE, SAMPLE_RATE, FREQ_BINS
 from frontend.components.elements.operator import Operator
 from frontend.enums.gradiant.trigger_mode import TriggerMode
 from frontend.group_nodes import KickDecayNode
@@ -25,6 +25,7 @@ from frontend.nodes.pipelines.visual import SingleColorNode, RGBAPipelineNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow import GradiantNode
 from frontend.nodes.routing_node import RoutingNode
+from frontend.nodes.routing_node.gathering_node import GatheringNode
 from frontend.nodes.simple import ConstantArrayNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.trigger.trigger import TriggerNode
@@ -61,7 +62,7 @@ def main():
 
     buffer_node = BufferNode(
         indata=stream_player_node.chunk,
-        chunk_size=stream_player_node.chunk.value.shape[0],
+        chunk_size=stream_player_node.chunk.value.shape[1],
         length=analysis_chunk_size,
         alias="buffer_node",
     )
@@ -80,34 +81,62 @@ def main():
         alias="avg_frequencies",
     )
 
-    between_500_and_1500 = OperatorPipelineNode(
-        arguments=[
-            500,
-            "<",
-            avg_frequencies.data,
-            "<",
-            1500
-        ],
-        alias="between_500_and_1500",
-    )
-
-    between_1500_and_2500 = OperatorPipelineNode(
-        arguments=[
-            1500,
-            "<",
-            avg_frequencies.data,
-            "<",
-            2500
-        ],
-        alias="between_1500_and_2500",
-    )
-
     routing_node = RoutingNode(
         operator_nodes=[
-            between_500_and_1500,
-            between_1500_and_2500,
+            (between_500_and_1500 := OperatorPipelineNode(
+                arguments=[
+                    500,
+                    "<",
+                    avg_frequencies.data,
+                    "<",
+                    1500
+                ],
+                alias="between_500_and_1500",
+            )),
+            (between_1500_and_2500 := OperatorPipelineNode(
+                arguments=[
+                    1500,
+                    "<",
+                    avg_frequencies.data,
+                    "<",
+                    2500
+                ],
+                alias="between_1500_and_2500",
+            ))
         ],
         alias="routing_node",
+    )
+
+    single_color_blue = SingleColorNode(
+        color=(0, 0, 255),
+        alias="single_color_blue",
+    )
+
+    single_color_red = SingleColorNode(
+        color=(255, 0, 0),
+        alias="single_color_red",
+    )
+
+    gathering_node = GatheringNode(
+        input_datas=[
+            single_color_blue.data,
+            single_color_red.data,
+        ],
+        input_booleans=[
+            between_500_and_1500.data,
+            between_1500_and_2500.data,
+        ]
+    )
+
+    bar_chart_node = BarGraphChartNode(
+        data=np.ones(FREQ_BINS),
+        title="Routing",
+        number_points=FREQ_BINS,
+        left_label="A",
+        bottom_label="B",
+        brushes=gathering_node.data,
+        y_min=0,
+        y_max=1,
     )
 
     flowchart = CFlowchart(

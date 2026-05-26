@@ -1,9 +1,11 @@
 import numpy as np
+from pyparsing import LineEnd
 
 from config import CHUNK_SIZE, FFT_SIZE
 from backend.updatable.updatable import AudioUpdatable
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
+from frontend.components.elements.textedit import TextEdit
 from frontend.overrides.CNode import CNode
 
 
@@ -12,7 +14,7 @@ class BufferNode(CNode, AudioUpdatable):
 
     def __init__(
         self,
-        indata: np.ndarray = np.zeros(CHUNK_SIZE),
+        indata: np.ndarray = np.zeros((2, CHUNK_SIZE)),
         chunk_size: int = CHUNK_SIZE,
         length: int = FFT_SIZE,
         render: bool = True,
@@ -25,14 +27,35 @@ class BufferNode(CNode, AudioUpdatable):
         super().__init__(self.nodeName, terminals, render=render, alias=alias)
 
         self.indata = Element(self, "indata", ElementValue(indata))
-        self.chunk_size = Element(self, "chunk_size", ElementValue(chunk_size))
+        self.chunk_size = TextEdit(self, "chunk_size", ElementValue(chunk_size))
         self.length = Element(self, "length", ElementValue(length))
-        self.data = Element(self, "data", ElementValue(np.zeros(self.length.value)))
+        self.data = Element(self, "data", ElementValue(np.zeros((2, self.length.value))))
+
+        self.chunk_size.valueChanged.connect(self.on_chunk_size_change)
+        self.should_process = True
+
+    def on_chunk_size_change(self):
+        self.should_process = False
+
+        try:
+            int_chunk_size = int(self.chunk_size.value)
+            self.indata.value = np.hstack((
+                self.indata.value[:, :int_chunk_size],
+                np.zeros((2, max(0, int_chunk_size - self.indata.value.shape[1]))),
+            ))
+            self.data.value = np.zeros((2, self.length.value))
+        except (TypeError, ValueError):
+            return
+        finally:
+            self.should_process = True
 
     def c_update(self):
         self.roll()
 
     def roll(self):
+        if not self.should_process:
+            return
+
         chunk_size = int(self.chunk_size.value)
-        self.data.value[:] = np.roll(self.data.value, -chunk_size)
-        self.data.value[-chunk_size:] = self.indata.value
+        self.data.value[:] = np.roll(self.data.value, -chunk_size, axis=1)
+        self.data.value[:, -chunk_size:] = self.indata.value

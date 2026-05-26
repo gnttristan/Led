@@ -2,32 +2,25 @@ import sys
 
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
-from pyqtgraph.examples.colorMapsLinearized import length
 
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from config import DELAY_UPDATE, SAMPLE_RATE
-from frontend.enums.gradiant.trigger_mode import TriggerMode
+from frontend.enums.gradiant.gradiant_mode import GradiantMode
 from frontend.group_nodes import KickDecayNode
-from frontend.nodes.broadcast.broadcast_fraction import BroadcastFractionNode
 from frontend.nodes.broadcast.broadcast_indexes import BroadcastIndexesNode
-from frontend.nodes.broadcast.broadcast_rescaler import BroadcastRescalerNode
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.function import FunctionNode
-from frontend.nodes.pipelines import AmplitudesNode
+from frontend.nodes.pipelines import AmplitudesNode, ColorizePipelineNode
+from frontend.nodes.pipelines.amplitudes.avg_frequencies import AvgFrequenciesNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
-from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
-from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import SingleColorNode, RGBAPipelineNode
+from frontend.nodes.pipelines.visual import SingleColorNode, RGBAPipelineNode, RollingNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
-from frontend.nodes.rainbow import GradiantNode
-from frontend.nodes.simple import ConstantArrayNode
+from frontend.nodes.rainbow import GradiantNode, RainbowNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
-from frontend.nodes.trigger.trigger import TriggerNode
 from frontend.nodes.visual import BarGraphChartNode
-from frontend.nodes.visual.line_chart import LineChartNode
 from frontend.nodes.window.window import WindowNode
-from frontend.nodes.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct
+from frontend.nodes.windows_fcts import DecreasingAvgWindowFct
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.overrides.CNode import CNode
 from frontend.registry.registry import register_nodes
@@ -56,7 +49,7 @@ def main():
 
     buffer_node = BufferNode(
         indata=stream_player_node.chunk,
-        chunk_size=stream_player_node.chunk.value.shape[0],
+        chunk_size=stream_player_node.chunk.value.shape[1],
         length=analysis_chunk_size,
         alias="buffer_node",
     )
@@ -69,9 +62,22 @@ def main():
         alias="amplitudes_node",
     )
 
+    avg_frequencies_node = AvgFrequenciesNode(
+        input_amplitudes=amplitudes_node.data,
+        input_frequencies=amplitudes_node.frequencies,
+        alias="avg_frequencies_node",
+    )
+
+    avg_frequencies_correlation_offset = ValueTransformerPipelineNode(
+        input_value=avg_frequencies_node.data,
+        input_value_interval=[400, 900],
+        output_value_interval=[0.04, 0.12],
+        alias="avg_frequencies_correlation_offset",
+    )
+
     amplitudes_transformer_node = LinearAmplitudesTransformerNode(
         input_data=amplitudes_node.data,
-        correlation_offset=0.1,
+        correlation_offset=avg_frequencies_correlation_offset.output_value,
         correlation_step=0.02,
         alias="amplitudes_transformer_node",
     )
@@ -83,6 +89,24 @@ def main():
         alias="amplitudes_node_normalized",
     )
 
+    avg_frequencies_color_level = ValueTransformerPipelineNode(
+        input_value=avg_frequencies_node.data,
+        input_value_interval=[400, 900],
+        output_value_interval=[0, 1],
+        alias="avg_frequencies_color_level",
+    )
+
+    avg_frequencies_color_level_window = WindowNode(
+        input_data=avg_frequencies_color_level.output_value,
+        length=5,
+        alias="avg_frequencies_color_level_window",
+    )
+
+    avg_frequencies_color_level_window_fct = DecreasingAvgWindowFct(
+        window=avg_frequencies_color_level_window,
+        avg_axis=0,
+        alias="avg_frequencies_color_level_window_fct",
+    )
 
     function_node = FunctionNode(
         points=[(0, 1), (0.15, 0), (0.5, 1), (0.85, 0), (1, 1)]
@@ -101,37 +125,43 @@ def main():
         alias="amplitudes_to_alpha",
     )
 
-    gradiant_node = GradiantNode(
+    rainbow_node_zero = RainbowNode(
+        color_in=(255, 0, 135),
+        color_out=(50, 50, 200),
+        cycle=0,
+        mode=GradiantMode.MIRROR,
+        alias="rainbow_node_zero"
+    )
+
+    rainbow_node_one = RainbowNode(
         color_in=(200, 50, 50),
-        color_out=(0, 0, 0),
-        n_points=100,
-        alias="gradiant_node",
+        color_out=(255, 200, 0),
+        cycle=0,
+        mode=GradiantMode.MIRROR,
+        alias="rainbow_node_one"
     )
 
-    kick_decay_node = KickDecayNode(
-        buffer_data=buffer_node.data,
-        lowpass_freq=300,
-        threshold=0.3,
-        decay_length=5,
-        alias="kick_decay_node",
+    rolling_rainbow_node_zero = RollingNode(
+        input_data=rainbow_node_zero.data,
+        roll_speed=4,
+        alias="rolling_rainbow_node_zero",
     )
 
-    broadcast_fraction_node = BroadcastFractionNode(
-        input_data=gradiant_node.data,
-        fraction=0.01,
-        interval_input=(0, 1),
-        input=kick_decay_node.data,
-        alias="broadcast_fraction_node",
+    rolling_rainbow_node_one = RollingNode(
+        input_data=rainbow_node_one.data,
+        roll_speed=-4,
+        alias="rolling_rainbow_node_one",
     )
 
-    broadcast_rescaler_node = BroadcastRescalerNode(
-        input_data=broadcast_fraction_node.data,
-        length=broadcast_indexes_node.data.value.shape[-1],
-        alias="broadcast_rescaler_node",
+    colorize_node = ColorizePipelineNode(
+        input_rgb=rolling_rainbow_node_zero.data,
+        color=rolling_rainbow_node_one.data,
+        color_level=avg_frequencies_color_level_window_fct.data
     )
+
 
     rgba_pipeline_node = RGBAPipelineNode(
-        rgb=broadcast_rescaler_node.data,
+        rgb=colorize_node.output_rgb,
         alpha=amplitudes_to_alpha.output_value,
     )
 

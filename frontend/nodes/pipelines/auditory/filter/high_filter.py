@@ -17,12 +17,13 @@ class HighFilterPipelineNode(CNode, Filter):
         buffer_data: np.ndarray = np.zeros(0),
         highpass_freq: float = 20.0,
         render: bool = True,
+        alias: str | None = None,
     ) -> None:
         terminals = {
             "buffer_data": {"io": "in"},
             "data": {"io": "out"},
         }
-        super().__init__(self.nodeName, terminals, render=render)
+        super().__init__(self.nodeName, terminals, render=render, alias=alias)
         self.buffer_data = Element(self, "buffer_data", ElementValue(buffer_data))
         Filter.__init__(self, buffer_data=self.buffer_data)
 

@@ -12,7 +12,7 @@ class LineChartNode(CNode, VisualUpdatable):
 
     def __init__(
         self,
-        input_data: float = 0.0,
+        input_data: np.ndarray = np.zeros(1),
         title: str = "Title",
         number_points: int = 100,
         left_label: str = "Left label",
@@ -34,7 +34,7 @@ class LineChartNode(CNode, VisualUpdatable):
         self.chart = LineChartElement(
             self,
             "chart",
-            input_data=self.input_data.value,
+            input_data=float(self.input_data.value[-1]) if self.input_data.value.size else 0.0,
             number_points=self.number_points.value,
             left_label=self.left_label.value,
             bottom_label=self.bottom_label.value,
@@ -53,7 +53,5 @@ class LineChartNode(CNode, VisualUpdatable):
 
     def c_update(self):
         value = self.input_data.value
-        if isinstance(value, np.ndarray):
-            value = float(np.ravel(value)[-1]) if value.size else 0.0
-        self.chart.input_data = float(value)
+        self.chart.input_data = float(value[-1]) if value.size else 0.0
         return self.chart.c_update()

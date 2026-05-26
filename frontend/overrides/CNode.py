@@ -1,9 +1,9 @@
 import inspect
-from typing import Iterable, Mapping
+import math
+from typing import Iterable, Mapping, Any
 
 import numpy as np
-from PyQt5 import QtCore
-from PyQt5 import QtWidgets
+from PyQt5 import QtCore, QtWidgets
 from PyQt5 import sip
 from pyqtgraph.flowchart import Node
 
@@ -23,7 +23,7 @@ class CNode(Node):
         node_name: str,
         terminals: Mapping[str, Mapping[str, object]],
         render: bool = True,
-        parent: "CNode | None" = None,
+        parent: Any = None,
         alias: str | None = None,
     ) -> None:
         self.node_name = node_name
@@ -49,7 +49,7 @@ class CNode(Node):
         self.connect_position_refresh()
 
     def connect_position_refresh(self):
-        if hasattr(self, "_position_refresh_connected"):
+        if getattr(self, "_position_refresh_connected", False):
             return
         item = self.graphicsItem()
         item.xChanged.connect(self.refresh_embedded_child_terminal_positions)
@@ -59,6 +59,10 @@ class CNode(Node):
     def refresh_embedded_child_terminal_positions(self):
         for child_node in self.child_nodes():
             child_node.refresh_terminal_positions()
+
+    @property
+    def is_embedded(self):
+        return isinstance(self.parent, CNode)
 
     def saveState(self):
         state = super().saveState()
@@ -96,10 +100,7 @@ class CNode(Node):
         if hasattr(self, parameter_name):
             return self._element_value(getattr(self, parameter_name)), None
 
-        if parameter.default is not inspect._empty:
-            return parameter.default, None
-
-        return None, None
+        return (parameter.default, None) if parameter.default is not inspect._empty else (None, None)
 
     def _connected_output_terminal(self, parameter_name):
         terminal = self.terminals.get(parameter_name.lower())
@@ -107,9 +108,7 @@ class CNode(Node):
             return None
 
         remote_terminal = next(iter(terminal.connections()), None)
-        if remote_terminal is not None and remote_terminal.isOutput():
-            return remote_terminal
-        return None
+        return remote_terminal if remote_terminal is not None and remote_terminal.isOutput() else None
 
     @staticmethod
     def _element_ref(terminal):
@@ -123,9 +122,10 @@ class CNode(Node):
     @classmethod
     def _remote_terminal_value(cls, terminal):
         owner = getattr(terminal.node(), "obj", terminal.node())
-        if not hasattr(owner, terminal.name()):
+        element_name = owner.terminal_element_name(terminal.name())
+        if not hasattr(owner, element_name):
             return None
-        return cls._element_value(getattr(owner, terminal.name()))
+        return cls._element_value(getattr(owner, element_name))
 
     @staticmethod
     def _element_value(value):
@@ -134,25 +134,12 @@ class CNode(Node):
     @classmethod
     def serialize_state_value(cls, value):
         if isinstance(value, np.ndarray):
-            return {
-                cls._SERDE_TAG: "ndarray",
-                "dtype": str(value.dtype),
-                "value": value.tolist(),
-            }
+            return cls._serde("ndarray", dtype=str(value.dtype), value=value.tolist())
         if isinstance(value, np.generic):
-            return {
-                cls._SERDE_TAG: "npscalar",
-                "dtype": str(value.dtype),
-                "value": value.item(),
-            }
+            return cls._serde("npscalar", dtype=str(value.dtype), value=value.item())
         if isinstance(value, tuple):
             serialized = cls._serialize_sequence(value)
-            if serialized is None:
-                return None
-            return {
-                cls._SERDE_TAG: "tuple",
-                "value": serialized,
-            }
+            return None if serialized is None else cls._serde("tuple", value=serialized)
         if isinstance(value, list):
             return cls._serialize_sequence(value)
         if isinstance(value, dict):
@@ -164,14 +151,18 @@ class CNode(Node):
         return None
 
     @classmethod
+    def _serde(cls, serde_type, **payload):
+        return {cls._SERDE_TAG: serde_type, **payload}
+
+    @classmethod
     def _serialize_sequence(cls, values):
         serialized = [cls.serialize_state_value(item) for item in values]
-        return None if any(item is None for item in serialized) else serialized
+        return serialized if all(item is not None for item in serialized) else None
 
     @classmethod
     def _serialize_mapping(cls, values):
         serialized = {key: cls.serialize_state_value(item) for key, item in values.items()}
-        return None if any(item is None for item in serialized.values()) else serialized
+        return serialized if all(item is not None for item in serialized.values()) else None
 
     @classmethod
     def deserialize_state_value(cls, value):
@@ -190,7 +181,8 @@ class CNode(Node):
 
     def init_terminals(self):
         for name, opts in self.pending_terminals.items():
-            self.addTerminal(name, **opts)
+            if name not in self.terminals:
+                self.addTerminal(name, **opts)
 
     def init_elements(self):
         if self._elements_proxy is not None:
@@ -198,7 +190,6 @@ class CNode(Node):
 
         item = super().graphicsItem()
         container = QtWidgets.QWidget()
-        container.setStyleSheet(f"background-color: {item.brush.color().name()};")
         container.setStyleSheet("border: 1px solid #666;")
         self._elements_container = container
 
@@ -211,8 +202,6 @@ class CNode(Node):
 
         self._elements_proxy = QtWidgets.QGraphicsProxyWidget(item)
         self._elements_proxy.setWidget(container)
-        self._elements_proxy.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, False)
-        self._elements_proxy.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsPanel, False)
         self._elements_proxy.setZValue(1)
         self._elements_proxy.setPos(self.INNER_MARGIN, self.TITLE_OFFSET)
 
@@ -262,9 +251,36 @@ class CNode(Node):
     def _iter_child_values(cls, value):
         if isinstance(value, CNode):
             yield value
-        elif isinstance(value, list):
+        if isinstance(value, list):
             for item in value:
                 yield from cls._iter_child_values(item)
+
+    def embed_in(self, parent_node, placeholder):
+        self.parent = parent_node
+        if self._elements_proxy is None:
+            self.init_all()
+
+        item = self.graphicsItem()
+        parent_item = parent_node.graphicsItem()
+        if item.parentItem() is not parent_item:
+            item.setParentItem(parent_item)
+        item.show()
+        item.setZValue(10)
+        self._embedded_placeholder = placeholder
+        self.sync_embedded_graphics_item()
+
+    def sync_embedded_graphics_item(self):
+        placeholder = getattr(self, "_embedded_placeholder", None)
+        if placeholder is None or not self.is_embedded or self.parent._elements_container is None:
+            return
+
+        item = self.graphicsItem()
+        rect = item.boundingRect()
+        placeholder.setFixedSize(math.ceil(rect.width()), math.ceil(rect.height()))
+
+        pos = placeholder.mapTo(self.parent._elements_container, QtCore.QPoint(0, 0))
+        item.setPos(self.parent.INNER_MARGIN + pos.x(), self.parent.TITLE_OFFSET + pos.y())
+        self.refresh_terminal_positions()
 
     def addTerminal(self, name, **opts):
         name = self.nextTerminalName(name)
@@ -287,8 +303,7 @@ class CNode(Node):
         if local_element is None or remote_element is None:
             return
 
-        # Keep input elements synced to their connected output terminal value.
-        local_element.value = lambda: remote_element.value
+        local_element.value = remote_element.value
 
     def disconnected(self, localTerm, remoteTerm):
         if not localTerm.isInput() or not remoteTerm.isOutput():
@@ -306,13 +321,21 @@ class CNode(Node):
 
     @staticmethod
     def _terminal_element(term):
-        element = getattr(term.node(), term.name(), None)
+        node = term.node()
+        element = getattr(node, node.terminal_element_name(term.name()), None)
         return element if hasattr(element, "value") else None
+
+    def terminal_element_name(self, terminal_name):
+        return terminal_name
 
     def get_flowchart_visible_nodes(self):
         if self.parent is not None:
             return self.parent.get_flowchart_visible_nodes()
-        return self.graphicsItem().getViewBox()
+
+        scene = self.graphicsItem().scene()
+        if scene is None:
+            return []
+        return [item.node for item in scene.items() if item.node is not self and item.isVisible()]
 
     def c_update(self, **kwargs):
         return {}

@@ -13,25 +13,25 @@ from frontend.overrides.CNode import CNode
 
 
 class CFlowchart(Flowchart):
+    PAUSE_EVENTS = (
+        QtCore.QEvent.Type.MouseButtonPress,
+        QtCore.QEvent.Type.MouseButtonRelease,
+        QtCore.QEvent.Type.KeyPress,
+        QtCore.QEvent.Type.Wheel,
+    )
+
     def __init__(self, nodes=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.widget().installEventFilter(self)
         self.inputNode.graphicsItem().hide()
         self.outputNode.graphicsItem().hide()
 
-        # self.viewBox.sigRangeChanged.connect(self.on_view_range_changed)
         self.add_nodes(nodes or [])
         self.visible_nodes = self.get_visible_nodes()
-        ##!! change with visible nodes
         QtCore.QTimer.singleShot(0, lambda: self.place_nodes())
 
     def eventFilter(self, obj, event):
-        if event.type() in (
-            QtCore.QEvent.Type.MouseButtonPress,
-            QtCore.QEvent.Type.MouseButtonRelease,
-            QtCore.QEvent.Type.KeyPress,
-            QtCore.QEvent.Type.Wheel,
-        ):
+        if event.type() in self.PAUSE_EVENTS:
             pause_updates()
         return False
 
@@ -111,8 +111,6 @@ class CFlowchart(Flowchart):
             self.inputNode.restoreState(state.get("inputNode", {}))
             self.outputNode.restoreState(state.get("outputNode", {}))
 
-            ##!! ToDo Look in depth and maybe change [#1] : preferable solution : keep Elements values Elements as
-            ##!! ToDo Elements when load UI so no need to rebuild terminals here
             self._connect_saved_terminals(state["connects"])
         finally:
             self.blockSignals(False)
@@ -126,12 +124,7 @@ class CFlowchart(Flowchart):
         if ctor_kwargs is None:
             return None
 
-        node = self.createNode(
-            node_state["class"],
-            name=node_state["name"],
-            pos=node_state["pos"],
-            ctor_kwargs=ctor_kwargs,
-        )
+        node = self.createNode(node_state["class"], node_state["name"], node_state["pos"], ctor_kwargs)
         node.restoreState(node_state["state"])
         return node
 
@@ -144,19 +137,16 @@ class CFlowchart(Flowchart):
         if not self._resolve_init_refs(ctor_kwargs, state.get("init_refs", {})):
             return None
 
-        arguments = state.get("arguments")
-        if arguments is not None:
-            resolved_arguments = self._resolve_arguments(arguments)
-            if resolved_arguments is None:
+        if (arguments := state.get("arguments")) is not None:
+            if (arguments := self._resolve_arguments(arguments)) is None:
                 return None
-            ctor_kwargs["arguments"] = resolved_arguments
+            ctor_kwargs["arguments"] = arguments
 
         return ctor_kwargs
 
     def _resolve_init_refs(self, ctor_kwargs, init_refs):
         for parameter_name, payload in init_refs.items():
-            element = self._resolve_element_ref(payload.get("__element_ref__", {}))
-            if element is None:
+            if (element := self._resolve_element_ref(payload.get("__element_ref__", {}))) is None:
                 return False
             ctor_kwargs[parameter_name] = element
         return True
@@ -185,11 +175,8 @@ class CFlowchart(Flowchart):
             try:
                 node1 = self._nodes.get(n1)
                 node2 = self._nodes.get(n2)
-                if node1 is None or node2 is None:
-                    continue
-                if t1 not in node1.terminals or t2 not in node2.terminals:
-                    continue
-                self.connectTerminals(node1[t1], node2[t2])
+                if node1 is not None and node2 is not None and t1 in node1.terminals and t2 in node2.terminals:
+                    self.connectTerminals(node1[t1], node2[t2])
             except Exception:
                 printExc("Error connecting terminals %s.%s - %s.%s:" % (n1, t1, n2, t2))
 
@@ -207,7 +194,9 @@ class CFlowchart(Flowchart):
         return [
             node
             for node in self._nodes.values()
-            if node.graphicsItem() is not None and node.graphicsItem().isVisible()
+            if not getattr(node, "is_embedded", False)
+            and (item := node.graphicsItem()) is not None
+            and item.isVisible()
         ]
 
     def place_nodes(self):
@@ -254,12 +243,13 @@ class CFlowchart(Flowchart):
         positions = {}
         x = 0.0
         for layer_nodes in layers:
-            layer_width = max(self._layout_node_size(node_by_name[name])[0] for name in layer_nodes)
-            layer_height = sum(self._layout_node_size(node_by_name[name])[1] for name in layer_nodes)
+            sizes = {name: self._layout_node_size(node_by_name[name]) for name in layer_nodes}
+            layer_width = max(width for width, _ in sizes.values())
+            layer_height = sum(height for _, height in sizes.values())
             layer_height += y_gap * max(0, len(layer_nodes) - 1)
             y = -layer_height / 2.0
             for node_name in sorted(layer_nodes):
-                _, node_height = self._layout_node_size(node_by_name[node_name])
+                _, node_height = sizes[node_name]
                 positions[node_name] = (x, y + node_height / 2.0)
                 y += node_height + y_gap
             x += layer_width + x_gap
@@ -277,8 +267,7 @@ class CFlowchart(Flowchart):
             visible_children = [child for child in group_nodes if getattr(child, "render", False)]
             if visible_children:
                 child_sizes = [self._layout_node_size(child) for child in visible_children]
-                child_widths = [child_width for child_width, _ in child_sizes]
-                child_heights = [child_height for _, child_height in child_sizes]
+                child_widths, child_heights = zip(*child_sizes)
                 width = max(width, sum(child_widths) + 360.0 * max(0, len(child_widths) - 1))
                 height = max(height, max(child_heights))
 
@@ -286,6 +275,6 @@ class CFlowchart(Flowchart):
 
     def display_create_node_form(self, node):
         node_name = node.name()
-        node_args = list(dict(inspect.signature(node.__init__).parameters.items()).values())
+        node_args = list(inspect.signature(node.__init__).parameters.values())
         create_node_form = CreateNodeForm(self, node, node_name, node_args)
         return create_node_form.exec_() == CreateNodeForm.Accepted

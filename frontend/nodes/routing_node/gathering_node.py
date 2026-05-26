@@ -1,0 +1,57 @@
+from typing import List
+
+import numpy as np
+
+from backend.updatable.updatable import AudioUpdatable
+from frontend.components.elements.element import Element
+from frontend.components.elements.element_value import ElementValue
+from frontend.overrides.CNode import CNode
+
+
+class GatheringNode(CNode, AudioUpdatable):
+    nodeName = "Gathering"
+
+    def __init__(
+        self,
+        input_datas: List[Element] = [],
+        input_booleans: List[Element] = [],
+        render: bool = True,
+        alias: str | None = None,
+    ) -> None:
+        self.input_datas = input_datas
+        self.input_booleans = input_booleans
+        terminals = {
+            "data": {"io": "out"},
+        }
+        for data in self.input_datas:
+            terminals[self.resolve_element_name(data)] = {"io": "in"}
+
+        super().__init__(self.nodeName, terminals, render=render, alias=alias)
+
+        self.gathering_elements = self.init_data_and_booleans()
+        self.data = Element(self, "data", ElementValue(np.zeros_like(input_datas[0].value))) ##!! wouldn't work for floats
+
+
+    def c_update(self):
+        true_elements = np.array(list(map(lambda x: x.value, self.input_datas)))[
+            np.array(list(map(lambda y: y.value, self.input_booleans))).flatten()
+        ]
+        if true_elements.shape[0] > 0:
+            self.data.value[:] = true_elements
+
+    @staticmethod
+    def resolve_element_name(element):
+        node_name = getattr(element.node, "alias", None) or element.node.name()
+        return f"{node_name}:{element.name}".lower()
+
+    def init_data_and_booleans(self):
+        elements = []
+
+        for data in self.input_datas:
+            name = self.resolve_element_name(data)
+            element = Element(self, name, ElementValue(data))
+            setattr(self, name, element)
+            elements.append(element)
+
+        return elements
+

@@ -9,7 +9,7 @@ from frontend.overrides.CNode import CNode
 class CrestFactorNode(CNode, AudioPipeline):
     nodeName = "CrestFactor"
 
-    def __init__(self, buffer_data=np.zeros(0), render: bool = True, alias: str | None = None) -> None:
+    def __init__(self, buffer_data=np.zeros((2, 0)), render: bool = True, alias: str | None = None) -> None:
         terminals = {
             "buffer_data": {"io": "in"},
             "data": {"io": "out"},
@@ -20,9 +20,6 @@ class CrestFactorNode(CNode, AudioPipeline):
 
     def c_update(self):
         data = np.asarray(self.buffer_data.value, dtype=float)
-        if data.ndim > 1:
-            data = np.mean(data, axis=-1)
-        data = data.reshape(-1)
         if data.size == 0:
             self.data.value[...] = 0.0
             return
