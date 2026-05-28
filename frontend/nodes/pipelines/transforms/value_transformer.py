@@ -29,8 +29,8 @@ class ValueTransformerPipelineNode(CNode, AudioPipeline):
     def __init__(
             self,
             input_value: np.ndarray = np.zeros(1),
-            output_value_interval: list[int | float] | tuple[int | float, int | float] = [0, 1],
-            input_value_interval: list[int | float] | tuple[int | float, int | float] = [0, 1],
+            output_value_interval: tuple[int | float, int | float] = (0, 1),
+            input_value_interval: tuple[int | float, int | float] = (0, 1),
             render: bool = True,
             alias: str | None = None,
     ) -> None:

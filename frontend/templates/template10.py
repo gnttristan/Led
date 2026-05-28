@@ -177,12 +177,12 @@ def main():
     )
 
     bar_chart_node = BarGraphChartNode(
-        data=None,
+        data=broadcast_addition_heights.data,
         title="Amplitudes",
         number_points=FREQ_BINS,
         left_label="Amplitude",
         bottom_label="Frequency",
-        brushes=None,
+        brushes=rgba_pipeline_node.rgba,
         y_min=0,
         y_max=1,
         alias="bar_chart_node",

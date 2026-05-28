@@ -1,7 +1,9 @@
 from PyQt5 import QtWidgets
 import numpy as np
 
+from frontend.components.elements.element import Element
 from frontend.components.ui.form_row import FormRow
+from frontend.overrides.CNode import CNode
 
 
 class CreateNodeForm(QtWidgets.QDialog):
@@ -33,7 +35,14 @@ class CreateNodeForm(QtWidgets.QDialog):
         self.vbox_layout.addWidget(self.errors_placeholder)
 
     def init_for_parameters(self):
+        element_names = {
+            element.name
+            for element in self.node.elements
+            if isinstance(element, Element)
+        }
         for parameter in self.node_parameters:
+            if parameter.name not in element_names:
+                continue
             form_row = FormRow(self.flowchart, self.node, parameter)
             self.form_rows.append(form_row)
             self.vbox_layout.addWidget(form_row)
@@ -62,11 +71,14 @@ class CreateNodeForm(QtWidgets.QDialog):
                 self.errors.append(f"{element_name}: {err_msg}")
             elif corresponding_form_row.element.value is not None:
                 element.value = self._coerce_value(element.value, corresponding_form_row.element.value)
+                element.after_ui_init(corresponding_form_row.element)
 
         return len(self.errors) == 0
 
     @staticmethod
     def _coerce_value(current_value, new_value):
+        if isinstance(new_value, CNode):
+            return new_value
         if isinstance(current_value, np.ndarray):
             return np.asarray(new_value, dtype=current_value.dtype)
-        return type(current_value)(new_value)
+        return new_value if current_value is None else type(current_value)(new_value)

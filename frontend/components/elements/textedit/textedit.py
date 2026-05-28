@@ -12,6 +12,16 @@ class TextEdit(Element):
         self.text_edit.setFixedWidth(100)
         self.text_edit.textEdited.connect(self.on_text_edited)
         self.container_vchange_layout.addWidget(self.text_edit)
+        self.valueChanged.connect(self.sync_controls)
+        self.sync_controls()
 
     def on_text_edited(self, text):
         self.value = text
+
+    def sync_controls(self):
+        text = str(self.value)
+        if self.text_edit.text() == text:
+            return
+        self.text_edit.blockSignals(True)
+        self.text_edit.setText(text)
+        self.text_edit.blockSignals(False)

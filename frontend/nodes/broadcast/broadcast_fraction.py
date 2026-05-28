@@ -34,10 +34,28 @@ class BroadcastFractionNode(CNode, AudioUpdatable):
         self.interval_input = Interval(self, "interval_input", ElementValue(interval_input))
         self.input = Element(self, "input", ElementValue(input))
 
-        data_shape = (round(self.input_data.value.shape[0] * fraction), *self.input_data.value.shape[1:])
-        self.data = Element(self, "data", ElementValue(np.zeros(data_shape)))
+        self.data = Element(self, "data", ElementValue(np.zeros(self._data_shape())))
+        
+        self.fraction.valueChanged.connect(self.on_fraction_change)
+
+    def _data_shape(self):
+        return (
+            int(round(self.input_data.value.shape[0] * float(self.fraction.value))),
+            *self.input_data.value.shape[1:],
+        )
+
+    def on_fraction_change(self):
+        try:
+            if isinstance(self.fraction.value, str):
+                self.fraction.value = float(self.fraction.value)
+        except (TypeError, ValueError):
+            self.fraction.value = 1.
+        self.data.value = np.zeros(self._data_shape())
 
     def c_update(self):
+        if self.data.value.shape != self._data_shape():
+            self.data.value = np.zeros(self._data_shape())
+
         scale_position = np.clip(
             (self.input.value - self.interval_input.value[0]) / (self.interval_input.value[1] - self.interval_input.value[0]),
             0,
@@ -47,4 +65,3 @@ class BroadcastFractionNode(CNode, AudioUpdatable):
         window_length = int(self.fraction.value * self.input_data.value.shape[0])
         c = int(((1 - self.fraction.value) * scale_position * self.input_data.value.shape[0]).item())
         self.data.value[:] = self.input_data.value[c:c+window_length]
-

@@ -335,7 +335,7 @@ class CNode(Node):
         scene = self.graphicsItem().scene()
         if scene is None:
             return []
-        return [item.node for item in scene.items() if item.node is not self and item.isVisible()]
+        return [item.node for item in scene.items() if hasattr(item, "node") and item.node is not self and item.isVisible()]
 
     def c_update(self, **kwargs):
         return {}

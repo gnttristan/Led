@@ -287,3 +287,6 @@ class Element(QtWidgets.QWidget):
 
     def check_value(self, placeholder_value):
         return True, None
+
+    def after_ui_init(self, placeholder_element):
+        pass

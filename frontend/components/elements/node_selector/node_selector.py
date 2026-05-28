@@ -4,8 +4,8 @@ from PyQt5 import QtCore, QtWidgets
 
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.overrides.CNode import CNode
 from frontend.overrides.CComboBox import CComboBox
+from frontend.overrides.CNode import CNode
 
 
 class NodeSelector(Element):
@@ -60,7 +60,6 @@ class NodeSelector(Element):
 
         self.selected_element = None
 
-
         self.container_vchange_layout.addWidget(self.controls_container)
         if initial_element is not None:
             self.set_default_element(initial_element)
@@ -73,7 +72,6 @@ class NodeSelector(Element):
             lambda x: x.name,
             list(filter(lambda x: isinstance(x, Element), self.selected_node.elements))
         ))
-
 
     def refresh_selection_nodes(self):
         selected_text = self.selection_nodes_combobox.currentText()
@@ -102,7 +100,7 @@ class NodeSelector(Element):
                 selection_nodes[item - 1]
                 if item - 1 < len(selection_nodes)
                 else self.selected_node
-            ) # Because of the null element
+            )
             self.selected_elements = self.selected_node.elements
             self.selection_elements_combobox.clear()
 
@@ -111,14 +109,13 @@ class NodeSelector(Element):
         self.selection_nodes_combobox.currentIndexChanged.connect(self.set_node_value)
         self.set_element_value(0)
 
-
     def set_element_value(self, element_total):
-        if element_total <= 0: # 0 if null, -1 if no elements in self.selection_elements_combobox
+        if element_total <= 0:
             self.value = None
             return
 
-        self.selected_element = self.selected_elements[element_total - 1] # Because of the null element
-        self.value = lambda : self.selected_element.value
+        self.selected_element = self.selected_elements[element_total - 1]
+        self.value = lambda: self.selected_element.value
 
     def set_default_element(self, element):
         self.selected_node = element.node
@@ -134,4 +131,8 @@ class NodeSelector(Element):
         self.selection_elements_combobox.addItems(element_names)
         self.selection_elements_combobox.setCurrentText(element.name)
         self.selection_elements_combobox.blockSignals(False)
-        self.value = lambda : self.selected_element.value
+        self.value = lambda: self.selected_element.value
+
+    def after_ui_init(self, placeholder_element):
+        self.set_default_element(placeholder_element.selected_element)
+

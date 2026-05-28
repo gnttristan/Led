@@ -3,6 +3,7 @@ from typing import Callable
 
 from frontend.nodes.window.window import WindowNode
 
+
 class WindowFct:
     def __init__(
         self,
