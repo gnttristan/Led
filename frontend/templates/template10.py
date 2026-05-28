@@ -177,7 +177,7 @@ def main():
     )
 
     bar_chart_node = BarGraphChartNode(
-        data=broadcast_addition_heights.data,
+        data=np.ones(broadcast_addition_heights.data.value.shape[-1]),
         title="Amplitudes",
         number_points=FREQ_BINS,
         left_label="Amplitude",

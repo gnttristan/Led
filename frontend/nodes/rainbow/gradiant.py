@@ -9,7 +9,7 @@ from frontend.overrides.CNode import CNode
 
 
 class GradiantNode(CNode):
-    nodeName = "Grandiant"
+    nodeName = "Gradiant"
 
     def __init__(
         self,
@@ -17,7 +17,7 @@ class GradiantNode(CNode):
         color_in=(255, 0, 0),
         color_out=(0, 0, 255),
         render: bool = True,
-            parent: CNode | None = None,
+        parent: CNode | None = None,
         alias: str | None = None,
     ) -> None:
         terminals = {
@@ -30,12 +30,12 @@ class GradiantNode(CNode):
         self.color_out = ColorPicker(self, "color_out", ElementValue(color_out))
         self.data = Element(self, "data", ElementValue(np.zeros((int(self.n_points.value), 3), dtype=int)))
 
-        self.n_points.valueChanged.connect(self.refresh_grandiant)
-        self.color_in.valueChanged.connect(self.refresh_grandiant)
-        self.color_out.valueChanged.connect(self.refresh_grandiant)
-        self.refresh_grandiant()
+        self.n_points.valueChanged.connect(self.refresh_gradiant)
+        self.color_in.valueChanged.connect(self.refresh_gradiant)
+        self.color_out.valueChanged.connect(self.refresh_gradiant)
+        self.refresh_gradiant()
 
-    def refresh_grandiant(self):
+    def refresh_gradiant(self):
         try:
             n_points = int(self.n_points.value)
         except (TypeError, ValueError):

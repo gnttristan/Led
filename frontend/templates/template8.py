@@ -7,10 +7,11 @@ from backend.updatable.updatable import audio_updatable_objects, visual_updatabl
 from config import DELAY_UPDATE, SAMPLE_RATE
 from frontend.enums.gradiant.gradiant_mode import GradiantMode
 from frontend.group_nodes import KickDecayNode
+from frontend.nodes.broadcast.broadcast_addition import BroadcastAdditionNode
 from frontend.nodes.broadcast.broadcast_indexes import BroadcastIndexesNode
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.function import FunctionNode
-from frontend.nodes.pipelines import AmplitudesNode, BroadcastAdditionNode
+from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.pipelines.amplitudes.avg_frequencies import AvgFrequenciesNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode

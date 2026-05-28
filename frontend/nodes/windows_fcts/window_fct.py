@@ -21,6 +21,7 @@ class WindowFct:
             "window",
             ElementValue(window.window_fcts if window is not None else None),
             selection_nodes=self.get_flowchart_visible_nodes,
+            link_terminal=False
         )
         self.data = Element(
             self,

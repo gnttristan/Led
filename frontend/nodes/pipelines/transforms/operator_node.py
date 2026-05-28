@@ -7,7 +7,7 @@ from backend.pipelines.pipeline import AudioPipeline
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.components.elements.node_selector.node_selector import NodeSelector
-from frontend.components.elements.operator.operator import Operator
+from frontend.components.elements.dropbox.operator import Operator
 from frontend.components.elements.textedit.textedit import TextEdit
 from frontend.overrides.CNode import CNode
 
