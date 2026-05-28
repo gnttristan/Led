@@ -20,12 +20,11 @@ class ValueTransformerPipelineNode(CNode, AudioPipeline):
 
     @staticmethod
     def _compute_input_value_shape(value):
-        shape_per_type = {
-            float: lambda x: 1,
-            int: lambda x: 1,
-            np.ndarray: lambda x: x.shape[-1]
-        }
-        return shape_per_type[type(value)](value)
+        if isinstance(value, np.ndarray):
+            return value.shape[-1]
+        if isinstance(value, (float, int)):
+            return 1
+        raise TypeError(f"Unsupported input value type: {type(value).__name__}")
 
     def __init__(
             self,

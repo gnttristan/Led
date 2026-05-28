@@ -1,3 +1,4 @@
+import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from frontend.components.elements.element import Element
@@ -38,8 +39,11 @@ class ColorPicker(Element):
                 raise ValueError("Color string must be in #RRGGBB format")
             return tuple(int(text[i:i + 2], 16) for i in range(0, 6, 2))
 
-        if isinstance(color_value, tuple):
-            return color_value
+        if isinstance(color_value, np.ndarray):
+            color_value = color_value.tolist()
+
+        if isinstance(color_value, (tuple, list)) and len(color_value) == 3:
+            return tuple(int(np.clip(round(float(channel)), 0, 255)) for channel in color_value)
 
         raise ValueError("Color value must be an RGB tuple, list, or #RRGGBB string")
 
@@ -48,7 +52,7 @@ class ColorPicker(Element):
         return "#{:02X}{:02X}{:02X}".format(*color)
 
     def _to_qcolor(self) -> QtGui.QColor:
-        return QtGui.QColor(*self.value)
+        return QtGui.QColor(*self._normalize_color(self.value))
 
     def open_color_dialog(self) -> None:
         color = QtWidgets.QColorDialog.getColor(self._to_qcolor(), self, f"Select {self.name} color")

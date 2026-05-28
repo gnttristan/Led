@@ -2,38 +2,23 @@ import sys
 
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
-from pyqtgraph.examples.colorMapsLinearized import length
 
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from config import DELAY_UPDATE, SAMPLE_RATE, FREQ_BINS
-from frontend.components.elements.operator import Operator
-from frontend.enums.gradiant.trigger_mode import TriggerMode
-from frontend.group_nodes import KickDecayNode
-from frontend.nodes.broadcast.broadcast_fraction import BroadcastFractionNode
+from frontend.nodes.broadcast.broadcast_addition import BroadcastAdditionNode
 from frontend.nodes.broadcast.broadcast_indexes import BroadcastIndexesNode
-from frontend.nodes.broadcast.broadcast_rescaler import BroadcastRescalerNode
 from frontend.nodes.buffer import BufferNode
+from frontend.nodes.features import EntropyNode
 from frontend.nodes.function import FunctionNode
 from frontend.nodes.pipelines import AmplitudesNode
-from frontend.nodes.pipelines.amplitudes.avg_frequencies import AvgFrequenciesNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
-from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
-from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
-from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import SingleColorNode, RGBAPipelineNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
-from frontend.nodes.rainbow import GradiantNode
-from frontend.nodes.routing_node import RoutingNode
-from frontend.nodes.routing_node.gathering_node import GatheringNode
-from frontend.nodes.simple import ConstantArrayNode
+from frontend.nodes.rainbow import RainbowNode
+from frontend.enums.gradiant.gradiant_mode import GradiantMode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
-from frontend.nodes.trigger.trigger import TriggerNode
 from frontend.nodes.visual import BarGraphChartNode
-from frontend.nodes.visual.line_chart import LineChartNode
-from frontend.nodes.window.window import WindowNode
-from frontend.nodes.windows_fcts import AveragedWindowFct
-from frontend.nodes.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.overrides.CNode import CNode
 from frontend.registry.registry import register_nodes
@@ -75,68 +60,132 @@ def main():
         alias="amplitudes_node",
     )
 
-    avg_frequencies = AvgFrequenciesNode(
-        input_amplitudes=amplitudes_node.data,
-        input_frequencies=amplitudes_node.frequencies,
-        alias="avg_frequencies",
+    entropy_node = EntropyNode(
+        amplitudes=amplitudes_node.data,
+        alias="entropy_node",
     )
 
-    routing_node = RoutingNode(
-        operator_nodes=[
-            (between_500_and_1500 := OperatorPipelineNode(
-                arguments=[
-                    500,
-                    "<",
-                    avg_frequencies.data,
-                    "<",
-                    1500
-                ],
-                alias="between_500_and_1500",
-            )),
-            (between_1500_and_2500 := OperatorPipelineNode(
-                arguments=[
-                    1500,
-                    "<",
-                    avg_frequencies.data,
-                    "<",
-                    2500
-                ],
-                alias="between_1500_and_2500",
-            ))
-        ],
-        alias="routing_node",
+    entropy_level = ValueTransformerPipelineNode(
+        input_value=entropy_node.data,
+        input_value_interval=[0.85, 0.95],
+        output_value_interval=[0, 1],
+        alias="entropy_level",
     )
 
-    single_color_blue = SingleColorNode(
-        color=(0, 0, 255),
-        alias="single_color_blue",
+    entropy_correlation_step = ValueTransformerPipelineNode(
+        input_value=entropy_node.data,
+        input_value_interval=[0.85, 0.95],
+        output_value_interval=[0.01, 0.05],
+        alias="entropy_correlation_step",
     )
 
-    single_color_red = SingleColorNode(
-        color=(255, 0, 0),
-        alias="single_color_red",
+    amplitudes_transformer_node = LinearAmplitudesTransformerNode(
+        input_data=amplitudes_node.data,
+        correlation_offset=0.1,
+        correlation_step=entropy_correlation_step.output_value,
+        alias="amplitudes_transformer_node",
     )
 
-    gathering_node = GatheringNode(
-        input_datas=[
-            single_color_blue.data,
-            single_color_red.data,
-        ],
-        input_booleans=[
-            between_500_and_1500.data,
-            between_1500_and_2500.data,
-        ]
+    amplitudes_normalized = ValueTransformerPipelineNode(
+        input_value=amplitudes_transformer_node.data,
+        input_value_interval=[0, 7],
+        output_value_interval=[0, 1],
+        alias="amplitudes_normalized",
+    )
+
+    low_entropy_function_node = FunctionNode(
+        points=[(0, 0.1), (0.5, 1), (1, 0.1)],
+        alias="height_function_node",
+    )
+
+    high_entropy_function_node = FunctionNode(
+        points=[(0, 1), (0.5, 0), (1, 1)],
+        alias="height_function_node",
+    )
+
+    low_entropy_broadcast_node = BroadcastIndexesNode(
+        input_data=amplitudes_normalized.output_value,
+        indexes=low_entropy_function_node.data,
+        alias="height_broadcast_node",
+    )
+
+    high_entropy_broadcast_node = BroadcastIndexesNode(
+        input_data=amplitudes_normalized.output_value,
+        indexes=high_entropy_function_node.data,
+        alias="height_broadcast_node",
+    )
+
+    entropy_broadcast_node = BroadcastIndexesNode(
+        input_data=entropy_level.output_value,
+        indexes=np.zeros(FREQ_BINS),
+        alias="entropy_broadcast_node",
+    )
+
+    broadcast_addition_heights = BroadcastAdditionNode(
+        input_data=low_entropy_broadcast_node.data,
+        secondary_data=high_entropy_broadcast_node.data,
+        level=entropy_broadcast_node.data,
+        alias="broadcast_addition",
+    )
+
+    broadcast_addition_to_alpha = ValueTransformerPipelineNode(
+        input_value=broadcast_addition_heights.data,
+        input_value_interval=[0, 1],
+        output_value_interval=[0, 255],
+        alias="broadcast_addition_to_alpha",
+    )
+
+    rainbow_node_zero = RainbowNode(
+        color_in=(255, 0, 12),
+        color_out=(255, 132, 0),
+        cycle=0,
+        mode=GradiantMode.MIRROR,
+        alias="rainbow_node_zero"
+    )
+
+    rainbow_node_one = RainbowNode(
+        color_in=(0, 192, 255),
+        color_out=(21, 0, 255),
+        cycle=0,
+        mode=GradiantMode.MIRROR,
+        alias="rainbow_node_one"
+    )
+
+    rolling_rainbow_node_zero = RollingNode(
+        input_data=rainbow_node_zero.data,
+        roll_speed=1,
+        alias="rolling_rainbow_node_zero",
+    )
+
+    rolling_rainbow_node_one = RollingNode(
+        input_data=rainbow_node_one.data,
+        roll_speed=-1,
+        alias="rolling_rainbow_node_one",
+    )
+
+    broadcast_addition_colors = BroadcastAdditionNode(
+        input_data=rolling_rainbow_node_zero.data,
+        secondary_data=rolling_rainbow_node_one.data,
+        level=entropy_broadcast_node.data,
+        alias="broadcast_addition",
+    )
+
+    rgba_pipeline_node = RGBAPipelineNode(
+        rgb=broadcast_addition_colors.data,
+        alpha=broadcast_addition_to_alpha.output_value,
+        alias="rgba_pipeline_node",
     )
 
     bar_chart_node = BarGraphChartNode(
-        data=np.ones(FREQ_BINS),
-        title="Routing",
+        data=None,
+        title="Amplitudes",
         number_points=FREQ_BINS,
-        left_label="A",
-        bottom_label="B",
-        brushes=gathering_node.data,
+        left_label="Amplitude",
+        bottom_label="Frequency",
+        brushes=None,
         y_min=0,
         y_max=1,
+        alias="bar_chart_node",
     )
 
     flowchart = CFlowchart(

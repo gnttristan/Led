@@ -14,7 +14,7 @@ class LowFilterPipelineNode(CNode, Filter):
 
     def __init__(
         self,
-        buffer_data: np.ndarray = np.zeros(0),
+        buffer_data: np.ndarray = np.zeros((2, FFT_SIZE)),
         lowpass_freq: float = 1000.0,
         render: bool = True,
         alias: str | None = None,
@@ -28,7 +28,7 @@ class LowFilterPipelineNode(CNode, Filter):
         Filter.__init__(self, buffer_data=self.buffer_data)
 
         self.lowpass_freq = LinearDial(self, "lowpass_freq", 20, 1000, ElementValue(lowpass_freq))
-        self.data = Element(self, "data", ElementValue(np.zeros(FFT_SIZE)))
+        self.data = Element(self, "data", ElementValue(np.zeros(self.buffer_data.value.shape)))
 
     @staticmethod
     def butter_lowpass(lowcut, fs, order=1):

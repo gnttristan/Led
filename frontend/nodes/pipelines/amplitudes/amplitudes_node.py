@@ -14,7 +14,7 @@ class AmplitudesNode(CNode, AudioUpdatable):
 
     def __init__(
             self,
-            buffer: np.ndarray = np.zeros(FFT_SIZE),
+            buffer: np.ndarray = np.zeros((2, FFT_SIZE)),
             min_frequency: int | float = MIN_FREQUENCY,
             max_frequency: int | float = MAX_FREQUENCY,
             fft_size: int = FFT_SIZE,
@@ -56,7 +56,7 @@ class AmplitudesNode(CNode, AudioUpdatable):
         windowed = self.buffer.value * self.window
         fft_result = np.fft.rfft(windowed, n=self.fft_size.value)
         fft_frequencies = np.fft.rfftfreq(self.fft_size.value, d=1.0 / SAMPLE_RATE)
-        fft_amplitudes = np.abs(fft_result)
+        fft_amplitudes = np.mean(np.abs(fft_result), axis=0)
         target_frequencies = self.frequencies.value
         updated_amplitudes = np.interp(
             target_frequencies,

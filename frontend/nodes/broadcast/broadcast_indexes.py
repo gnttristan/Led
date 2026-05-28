@@ -26,7 +26,7 @@ class BroadcastIndexesNode(CNode, AudioUpdatable):
 
         self.input_data = Element(self, "input_data", ElementValue(input_data))
         self.indexes = Element(self, "indexes", ElementValue(indexes))
-        self.data = Element(self, "data", ElementValue(np.zeros(int(self.input_data.value.shape[-1]))))
+        self.data = Element(self, "data", ElementValue(np.zeros_like(self.indexes.value, dtype=float)))
         self.current_indexes = np.empty_like(self.indexes.value, dtype=np.int16)
 
     def c_update(self):

@@ -10,7 +10,7 @@ from frontend.group_nodes import KickDecayNode
 from frontend.nodes.broadcast.broadcast_indexes import BroadcastIndexesNode
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.function import FunctionNode
-from frontend.nodes.pipelines import AmplitudesNode, ColorizePipelineNode
+from frontend.nodes.pipelines import AmplitudesNode, BroadcastAdditionNode
 from frontend.nodes.pipelines.amplitudes.avg_frequencies import AvgFrequenciesNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
@@ -153,15 +153,15 @@ def main():
         alias="rolling_rainbow_node_one",
     )
 
-    colorize_node = ColorizePipelineNode(
-        input_rgb=rolling_rainbow_node_zero.data,
-        color=rolling_rainbow_node_one.data,
-        color_level=avg_frequencies_color_level_window_fct.data
+    broadcast_addition = BroadcastAdditionNode(
+        input_data=rolling_rainbow_node_zero.data,
+        secondary_data=rolling_rainbow_node_one.data,
+        level=avg_frequencies_color_level_window_fct.data
     )
 
 
     rgba_pipeline_node = RGBAPipelineNode(
-        rgb=colorize_node.output_rgb,
+        rgb=broadcast_addition.data,
         alpha=amplitudes_to_alpha.output_value,
     )
 

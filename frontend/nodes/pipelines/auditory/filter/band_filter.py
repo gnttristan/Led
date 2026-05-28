@@ -14,7 +14,7 @@ class BandFilterPipelineNode(CNode, Filter):
 
     def __init__(
         self,
-        buffer_data: np.ndarray = np.zeros(0),
+        buffer_data: np.ndarray = np.zeros((2, FFT_SIZE)),
         lowcut: float = 500.0,
         highcut: float = 3000.0,
         render: bool = True,
@@ -30,7 +30,7 @@ class BandFilterPipelineNode(CNode, Filter):
 
         self.lowcut = LinearDial(self, "lowcut", 1, 1000, ElementValue(lowcut))
         self.highcut = LinearDial(self, "highcut", 1, 5000, ElementValue(highcut))
-        self.data = Element(self, "data", ElementValue(np.zeros(FFT_SIZE)))
+        self.data = Element(self, "data", ElementValue(np.zeros(self.buffer_data.value.shape)))
 
     @staticmethod
     def butter_bandpass(lowcut, highcut, fs, order=1):

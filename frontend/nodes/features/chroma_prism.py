@@ -8,6 +8,8 @@ from frontend.overrides.CNode import CNode
 
 
 class ChromaPrismNode(VisualPipeline, CNode):
+    """nodeName labels the graph node; this node turns audio features into bar heights and colors."""
+
     nodeName = "ChromaPrism"
 
     def __init__(

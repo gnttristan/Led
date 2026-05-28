@@ -16,7 +16,7 @@ from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node impor
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
-from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
+from frontend.nodes.broadcast.broadcast_addition import BroadcastAdditionNode
 from frontend.nodes.pipelines.visual.sliding_amp_gradient import SlidingAmpGradientNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.simple import SinArrayNode
@@ -145,10 +145,10 @@ def main():
         alias="centroid_color_level",
     )
 
-    colorized_nebula = ColorizePipelineNode(
-        input_rgb=nebula_gradient.data,
-        color=(255, 40, 180),
-        color_level=centroid_color_level.output_value,
+    colorized_nebula = BroadcastAdditionNode(
+        input_data=nebula_gradient.data,
+        secondary_data=(255, 40, 180),
+        level=centroid_color_level.output_value,
         alias="colorized_nebula",
     )
 
@@ -235,7 +235,7 @@ def main():
     )
 
     rgba_pipeline = RGBAPipelineNode(
-        rgb=colorized_nebula.output_rgb,
+        rgb=colorized_nebula.data,
         alpha=capped_alpha.output_value,
         alias="rgba_pipeline",
     )

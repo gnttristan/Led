@@ -127,7 +127,7 @@ class FunctionNode(CNode):
 
         self.edit_button = QtWidgets.QPushButton("Edit")
         self.edit_button.clicked.connect(self.open_editor)
-        self.elements.append(self.edit_button)
+        self.points.container_vchange_layout.addWidget(self.edit_button)
 
         self.number_points.valueChanged.connect(self._refresh_data)
         self._refresh_data()

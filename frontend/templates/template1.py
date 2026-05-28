@@ -5,28 +5,18 @@ from PyQt5 import QtCore, QtWidgets
 from config import DELAY_UPDATE, SAMPLE_RATE
 from frontend.enums.gradiant.gradiant_mode import GradiantMode
 from frontend.group_nodes import KickDecayNode
-from frontend.nodes.features import CrestFactorNode, OnsetStrengthNode
 from frontend.nodes.function.outbounds_fct import OutboundsFctNode
-from frontend.nodes.pipelines.amplitudes.freqscaled_amplitude_transformer_node import \
-    FreqScaledAmplitudesTransformerNode
-from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
-from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
-from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
-from frontend.nodes.pipelines.transforms.smoothing_node import SmoothingNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import RGBAPipelineNode, SingleColorNode, RollingNode
-from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
 from frontend.nodes.visual import BarGraphChartNode
 from frontend.overrides.CNode import CNode
-from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow import RainbowNode
 from frontend.nodes.simple import ConstantArrayNode, SinArrayNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
-from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
 from frontend.overrides.CFlowchart import CFlowchart
 from frontend.registry.registry import register_nodes
 

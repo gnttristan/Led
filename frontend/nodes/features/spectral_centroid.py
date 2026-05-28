@@ -8,6 +8,8 @@ from frontend.overrides.CNode import CNode
 
 
 class SpectralCentroidNode(CNode, AudioPipeline):
+    """nodeName labels the graph node; this node outputs the amplitude-weighted center frequency."""
+
     nodeName = "SpectralCentroid"
 
     def __init__(

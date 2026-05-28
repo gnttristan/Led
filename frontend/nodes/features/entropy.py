@@ -8,6 +8,8 @@ from frontend.overrides.CNode import CNode
 
 
 class EntropyNode(CNode, AudioPipeline):
+    """nodeName labels the graph node; this node outputs normalized spectral entropy."""
+
     nodeName = "Entropy"
 
     def __init__(self, amplitudes=np.zeros(FREQ_BINS), render: bool = True, alias: str | None = None) -> None:

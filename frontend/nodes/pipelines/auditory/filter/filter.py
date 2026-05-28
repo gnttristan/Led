@@ -7,7 +7,7 @@ from frontend.components.elements.element_value import ElementValue
 
 
 class Filter(AudioUpdatable):
-    def __init__(self, buffer_data: np.ndarray = np.zeros(0)) -> None:
+    def __init__(self, buffer_data: np.ndarray = np.zeros((2, 0))) -> None:
         super().__init__()
         self._buffer_data = ElementValue(buffer_data)
 

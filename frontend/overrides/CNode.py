@@ -303,7 +303,7 @@ class CNode(Node):
         if local_element is None or remote_element is None:
             return
 
-        local_element.value = remote_element.value
+        local_element.value = remote_element
 
     def disconnected(self, localTerm, remoteTerm):
         if not localTerm.isInput() or not remoteTerm.isOutput():

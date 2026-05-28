@@ -8,6 +8,8 @@ from frontend.overrides.CNode import CNode
 
 
 class OnsetStrengthNode(CNode, AudioPipeline):
+    """nodeName labels the graph node; this node outputs noise-adjusted onset strength."""
+
     nodeName = "OnsetStrength"
 
     def __init__(self, amplitudes=np.zeros(FREQ_BINS), render: bool = True, alias: str | None = None) -> None:

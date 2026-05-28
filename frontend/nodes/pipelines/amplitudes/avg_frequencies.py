@@ -26,10 +26,10 @@ class AvgFrequenciesNode(CNode, AudioUpdatable):
 
         self.input_frequencies = Element(self, "input_frequencies", ElementValue(input_frequencies))
         self.input_amplitudes = Element(self, "input_amplitudes", ElementValue(input_amplitudes))
-        self.data = Element(self, "data", ElementValue(0.0))
+        self.data = Element(self, "data", ElementValue(np.zeros(1)))
 
     def c_update(self):
-        self.data.value = np.sum(
+        self.data.value[...] = np.sum(
             (self.input_amplitudes.value * self.input_frequencies.value)
             / np.sum(self.input_amplitudes.value + 1e-12)
         )

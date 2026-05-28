@@ -124,8 +124,7 @@ class Element(QtWidgets.QWidget):
             value = value.value
 
         if isinstance(value, Element):
-            self._value_ref = ElementValue(value.value)
-            self.value = value.value
+            self.value = value
             if self.link_terminal and self.node.parent is None:
                 QtCore.QTimer.singleShot(0, lambda: self.connect_terminal(value))
         else:
@@ -185,6 +184,14 @@ class Element(QtWidgets.QWidget):
 
     @value.setter
     def value(self, value):
+        if isinstance(value, Element):
+            self._value_ref = value
+            self._value = self._wrap_observable_array(value.value)
+            self.refresh_value_label()
+            self.valueChanged.emit(self.value)
+            return
+        if isinstance(self._value_ref, Element):
+            self._value_ref = None
         self._store_value(value)
         self.refresh_value_label()
         self.valueChanged.emit(self.value)
@@ -192,7 +199,7 @@ class Element(QtWidgets.QWidget):
     def _store_value(self, value):
         value = self._wrap_observable_array(value)
         self._value = value
-        if self._value_ref is not None and not callable(getattr(self._value_ref, "_value", None)):
+        if isinstance(self._value_ref, ElementValue):
             self._value_ref.value = value
 
     def _wrap_observable_array(self, value):

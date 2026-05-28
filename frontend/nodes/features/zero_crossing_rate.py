@@ -7,6 +7,8 @@ from frontend.overrides.CNode import CNode
 
 
 class ZeroCrossingRateNode(CNode, AudioPipeline):
+    """nodeName labels the graph node; this node outputs the average waveform sign-change rate."""
+
     nodeName = "ZeroCrossingRate"
 
     def __init__(self, buffer_data=np.zeros((2, 0)), render: bool = True, alias: str | None = None) -> None:

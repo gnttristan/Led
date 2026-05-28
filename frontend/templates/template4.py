@@ -3,19 +3,12 @@ import sys
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
 
-from config import DELAY_UPDATE, SAMPLE_RATE
+from config import DELAY_UPDATE
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
-from frontend.nodes.buffer import BufferNode
 from frontend.nodes.external import ESP32Node
 from frontend.nodes.simple import ConstantArrayNode
 from frontend.overrides.CNode import CNode
-from frontend.nodes.pipelines import AmplitudesNode
-from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
-from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
-from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
-from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode, RGBPPipelineNode
-from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
+from frontend.nodes.pipelines.visual import RollingNode, RGBPPipelineNode
 from frontend.nodes.rainbow import RainbowNode
 from frontend.nodes.stream import StreamMicNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode

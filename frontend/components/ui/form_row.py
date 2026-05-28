@@ -4,6 +4,7 @@ import numpy as np
 import inspect
 from PyQt5 import QtWidgets
 
+from frontend.components.elements import Interval
 from frontend.components.elements.dials import Dial
 from frontend.components.elements.element_value import ElementValue
 from frontend.components.elements.node_selector.node_selector import NodeSelector
@@ -16,6 +17,7 @@ class FormRow(QtWidgets.QWidget):
             str: lambda: TextEdit(p_node, prm.name, ElementValue(prm.default), register_in_node=False),
             int: lambda: TextEdit(p_node, prm.name, ElementValue(prm.default), register_in_node=False),
             float: lambda: TextEdit(p_node, prm.name, ElementValue(prm.default), register_in_node=False),
+            tuple: lambda: Interval(p_node, prm.name, ElementValue(prm.default), register_in_node=False),
             bool: lambda: Switch(p_node, prm.name, ElementValue(prm.default), register_in_node=False),
             np.ndarray: lambda: NodeSelector(p_node, prm.name, ElementValue(prm.default), selection_nodes=self.flowchart.visible_nodes, register_in_node=False),
             NoneType: lambda: TextEdit(p_node, prm.name, ElementValue(prm.default), register_in_node=False)

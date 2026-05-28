@@ -14,7 +14,7 @@ class HighFilterPipelineNode(CNode, Filter):
 
     def __init__(
         self,
-        buffer_data: np.ndarray = np.zeros(0),
+        buffer_data: np.ndarray = np.zeros((2, FFT_SIZE)),
         highpass_freq: float = 20.0,
         render: bool = True,
         alias: str | None = None,
@@ -28,7 +28,7 @@ class HighFilterPipelineNode(CNode, Filter):
         Filter.__init__(self, buffer_data=self.buffer_data)
 
         self.highpass_freq = LinearDial(self, "highpass_freq", 20, 5000, ElementValue(highpass_freq))
-        self.data = Element(self, "data", ElementValue(np.zeros(FFT_SIZE)))
+        self.data = Element(self, "data", ElementValue(np.zeros(self.buffer_data.value.shape)))
 
     @staticmethod
     def butter_highpass(highcut, fs, order=1):

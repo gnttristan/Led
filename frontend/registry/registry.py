@@ -1,5 +1,8 @@
 from pyqtgraph.flowchart import registerNodeType
 
+from frontend.nodes.broadcast.broadcast_fraction import BroadcastFractionNode
+from frontend.nodes.broadcast.broadcast_indexes import BroadcastIndexesNode
+from frontend.nodes.broadcast.broadcast_rescaler import BroadcastRescalerNode
 from frontend.nodes.external import ESP32Node
 from frontend.nodes.features import (
     ChromaPrismNode,
@@ -32,7 +35,8 @@ from frontend.nodes.buffer import BufferNode
 from frontend.nodes.group_node import GroupNode
 from frontend.nodes.routing_node import RoutingNode
 from frontend.nodes.pipelines import AmplitudesNode, SmoothingNode
-from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
+from frontend.nodes.broadcast.broadcast_addition import BroadcastAdditionNode
+from frontend.nodes.routing_node import GatheringNode
 from frontend.nodes.stream import StreamPlayerNode, StreamMicNode
 from frontend.nodes.visual.bar_graph_chart import BarGraphChartNode
 from frontend.nodes.visual.line_chart import LineChartNode
@@ -52,6 +56,7 @@ nodes = [
     BufferNode,
     GroupNode,
     RoutingNode,
+    GatheringNode,
     ConstantArrayNode,
     FunctionNode,
     SingleColorNode,
@@ -81,7 +86,7 @@ nodes = [
     LineChartNode,
     RainbowNode,
     GradiantNode,
-    ColorizePipelineNode,
+    BroadcastAdditionNode,
     RollingNode,
     ValueTransformerPipelineNode,
     OperatorPipelineNode,
@@ -95,6 +100,9 @@ nodes = [
     SCPlaylistPlayer,
     RGBAPipelineNode,
     RGBPPipelineNode,
+    BroadcastFractionNode,
+    BroadcastIndexesNode,
+    BroadcastRescalerNode,
 ]
 
 def register_nodes():

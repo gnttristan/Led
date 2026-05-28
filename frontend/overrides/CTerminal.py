@@ -8,12 +8,12 @@ class CTerminal(Terminal):
 
     @staticmethod
     def is_compatible(output_value, input_value):
-        type_compatibility = {
-            np.ndarray: lambda out_v, in_v: isinstance(out_v, np.ndarray) and out_v.shape == in_v.shape,
-        }
-        return (type_compatibility.get(type(output_value),
-            lambda out_v, in_v: isinstance(out_v, type(in_v))
-        )(output_value, input_value))
+        if callable(input_value):
+            return True
+        if isinstance(output_value, np.ndarray):
+            # return isinstance(input_value, np.ndarray) and output_value.shape == input_value.shape
+            return True
+        return isinstance(output_value, type(input_value))
 
     @staticmethod
     def display_error_message(message):

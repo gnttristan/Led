@@ -11,7 +11,7 @@ class RMSPipelineNode(CNode, AudioPipeline):
 
     def __init__(
         self,
-        buffer_data: np.ndarray = np.zeros(0),
+        buffer_data: np.ndarray = np.zeros((2, 0)),
         title: str = "RMS",
         number_points: int = 100,
         left_label: str = "Level",

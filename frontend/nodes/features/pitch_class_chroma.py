@@ -8,6 +8,8 @@ from frontend.overrides.CNode import CNode
 
 
 class PitchClassChromaNode(CNode, AudioPipeline):
+    """nodeName labels the graph node; this node outputs normalized 12-bin chroma energy."""
+
     nodeName = "PitchClassChroma"
 
     def __init__(

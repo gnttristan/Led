@@ -27,7 +27,7 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
     trackLoaded = QtCore.pyqtSignal(int)
 
     def __init__(self,
-             playlist_url: str = "https://soundcloud.com/trg-electro/sets/led2",
+             playlist_url: str = "https://soundcloud.com/trg-electro/sets/led",
              browser: str = "chrome",
              profile: str = "Default",
              prefetch_seconds: int | float = 10,
@@ -200,6 +200,8 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
 
     def _refresh_node_ui_geometry(self):
         self.playlist_player.adjustSize()
+        if self._elements_proxy is None or "audio" not in self.terminals:
+            return
         self.refresh_terminal_positions()
 
     def on_play_requested(self, index):

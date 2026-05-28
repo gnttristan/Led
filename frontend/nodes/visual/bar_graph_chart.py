@@ -5,6 +5,7 @@ from config import FREQ_BINS
 from frontend.components.elements.bar_graph_chart import BarGraphChartElement
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
+from frontend.components.elements.textedit.textedit import TextEdit
 from frontend.overrides.CNode import CNode
 
 
@@ -35,8 +36,8 @@ class BarGraphChartNode(CNode, VisualUpdatable):
         self.brushes = Element(self, "brushes", ElementValue(brushes))
         self.left_label = Element(self, "left_label", ElementValue(left_label))
         self.bottom_label = Element(self, "bottom_label", ElementValue(bottom_label))
-        self.y_min = Element(self, "y_min", ElementValue(y_min))
-        self.y_max = Element(self, "y_max", ElementValue(y_max))
+        self.y_min = TextEdit(self, "y_min", ElementValue(y_min))
+        self.y_max = TextEdit(self, "y_max", ElementValue(y_max))
         self.data = Element(self, "data", ElementValue(data))
         self.chart = BarGraphChartElement(
             self,
@@ -46,12 +47,14 @@ class BarGraphChartNode(CNode, VisualUpdatable):
             left_label=self.left_label.value,
             bottom_label=self.bottom_label.value,
             brushes=self.brushes.value,
-            y_min=self.y_min.value,
-            y_max=self.y_max.value,
+            y_min=float(self.y_min.value),
+            y_max=float(self.y_max.value),
             title=self.title.value,
             link_terminal=False,
             register_in_node=True,
         )
+        self.y_min.valueChanged.connect(self.on_y_range_change)
+        self.y_max.valueChanged.connect(self.on_y_range_change)
         if render:
             self.draw()
             self.chart.chart_button.setChecked(True)
@@ -59,6 +62,16 @@ class BarGraphChartNode(CNode, VisualUpdatable):
     def draw(self):
         return self.chart.draw()
 
-    def c_update(self):
-        return self.chart.c_update()
+    def on_y_range_change(self):
+        try:
+            self.chart.y_min = float(self.y_min.value)
+            self.chart.y_max = float(self.y_max.value)
+        except (TypeError, ValueError):
+            return
+        if self.chart.spectrogram is not None:
+            self.chart.spectrogram.getViewBox().setYRange(self.chart.y_min, self.chart.y_max)
 
+    def c_update(self):
+        self.chart.data = self.data.value
+        self.chart.brushes = self.brushes.value
+        return self.chart.c_update()

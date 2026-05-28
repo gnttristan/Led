@@ -23,22 +23,8 @@ class Interval(Element):
         self.controls_layout.setContentsMargins(0, 0, 0, 0)
         self.controls_layout.setSpacing(4)
 
-        self.min_edit = QtWidgets.QLineEdit()
-        self.min_edit.setFixedSize(60, 22)
-        self.min_edit.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.min_edit.editingFinished.connect(self.set_from_inputs)
-        self.controls_layout.addWidget(self.min_edit)
-
-        self.separator_label = QtWidgets.QLabel("-")
-        self.separator_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.separator_label.setFixedWidth(16)
-        self.controls_layout.addWidget(self.separator_label)
-
-        self.max_edit = QtWidgets.QLineEdit()
-        self.max_edit.setFixedSize(60, 22)
-        self.max_edit.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.max_edit.editingFinished.connect(self.set_from_inputs)
-        self.controls_layout.addWidget(self.max_edit)
+        self.edits = []
+        self._build_controls()
 
         self.container_vchange_layout.addWidget(self.controls_container)
         self.valueChanged.connect(self.sync_controls)
@@ -48,24 +34,38 @@ class Interval(Element):
     def _normalize_interval(value):
         if isinstance(value, np.ndarray):
             value = value.tolist()
-        if not isinstance(value, (list, tuple)) or len(value) != 2:
-            raise ValueError("Interval value must be a 2-item list or tuple")
-        return [float(value[0]), float(value[1])]
+        if not isinstance(value, (list, tuple)) or len(value) < 2:
+            raise ValueError("Interval value must be a list or tuple with at least 2 items")
+        return [float(item) for item in value]
 
     @staticmethod
     def _format_number(value):
         return f"{float(value):.6g}"
 
+    def _build_controls(self):
+        for index, _value in enumerate(self.value):
+            if index > 0:
+                separator_label = QtWidgets.QLabel("-")
+                separator_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                separator_label.setFixedWidth(16)
+                self.controls_layout.addWidget(separator_label)
+
+            edit = QtWidgets.QLineEdit()
+            edit.setFixedSize(60, 22)
+            edit.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            edit.editingFinished.connect(self.set_from_inputs)
+            self.controls_layout.addWidget(edit)
+            self.edits.append(edit)
+
     def set_from_inputs(self):
         try:
-            min_value = float(self.min_edit.text().strip())
-            max_value = float(self.max_edit.text().strip())
+            values = [float(edit.text().strip()) for edit in self.edits]
         except ValueError:
             self.sync_controls()
             return
-        self.value = [min_value, max_value]
+        self.value = values
 
     def sync_controls(self):
-        min_value, max_value = self._normalize_interval(self.value)
-        self.min_edit.setText(self._format_number(min_value))
-        self.max_edit.setText(self._format_number(max_value))
+        values = self._normalize_interval(self.value)
+        for edit, value in zip(self.edits, values):
+            edit.setText(self._format_number(value))

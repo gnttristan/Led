@@ -8,6 +8,8 @@ from frontend.overrides.CNode import CNode
 
 
 class SpectralFluxNode(CNode, AudioPipeline):
+    """nodeName labels the graph node; this node outputs positive frame-to-frame spectral change."""
+
     nodeName = "SpectralFlux"
 
     def __init__(self, amplitudes=np.zeros(FREQ_BINS), render: bool = True, alias: str | None = None) -> None:

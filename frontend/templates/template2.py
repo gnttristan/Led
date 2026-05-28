@@ -3,14 +3,12 @@ import sys
 from PyQt5 import QtCore, QtWidgets
 
 from config import DELAY_UPDATE, SAMPLE_RATE
-from frontend.nodes.external import ESP32Node
-from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual import RGBPPipelineNode, RollingNode
-from frontend.nodes.pipelines.visual.colorize_pipeline import ColorizePipelineNode
+from frontend.nodes.broadcast.broadcast_addition import BroadcastAdditionNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
 from frontend.overrides.CNode import CNode
@@ -137,10 +135,10 @@ def main():
         alias="rolling_rainbow",
     )
 
-    colorize_pipeline = ColorizePipelineNode(
-        input_rgb=rolling_rainbow.data,
-        color=(255, 255, 255),
-        color_level=rms_lowpass_transformed.output_value,
+    colorize_pipeline = BroadcastAdditionNode(
+        input_data=rolling_rainbow.data,
+        secondary_data=(255, 255, 255),
+        level=rms_lowpass_transformed.output_value,
         alias="colorize_pipeline",
     )
 
@@ -152,7 +150,7 @@ def main():
     )
 
     rgbp_pipeline = RGBPPipelineNode(
-        rgb=colorize_pipeline.output_rgb,
+        rgb=colorize_pipeline.data,
         alpha=amplitudes_to_alpha.output_value,
         alias="rgbp_pipeline",
     )
