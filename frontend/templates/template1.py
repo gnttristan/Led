@@ -14,7 +14,7 @@ from frontend.nodes.buffer import BufferNode
 from frontend.nodes.visual import BarGraphChartNode
 from frontend.overrides.CNode import CNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
-from frontend.nodes.rainbow import RainbowNode
+from frontend.nodes.rainbow import GradiantNode, RainbowNode
 from frontend.nodes.simple import ConstantArrayNode, SinArrayNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.overrides.CFlowchart import CFlowchart
@@ -55,10 +55,15 @@ def main():
         alias="rolling_sin",
     )
 
-    gradiant_rainbow = RainbowNode(
+    rainbow_gradiant = GradiantNode(
         color_in=(0, 0, 255),
         color_out=(127, 0, 127),
         cycle=-0.05,
+        alias="rainbow_gradiant",
+    )
+
+    gradiant_rainbow = RainbowNode(
+        gradiant=rainbow_gradiant.data,
         mode=GradiantMode.MIRROR,
         alias="gradiant_rainbow",
     )
@@ -95,7 +100,7 @@ def main():
     sin_to_alpha = ValueTransformerPipelineNode(
         input_value=alpha_with_outbound_up.data,
         input_value_interval=[0, 1.5],
-        output_value_interval=[0, 255],
+        output_value_interval=[0, 1],
         alias="sin_to_alpha",
     )
 

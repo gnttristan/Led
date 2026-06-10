@@ -15,7 +15,7 @@ from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node impor
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
 from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
-from frontend.nodes.rainbow import RainbowNode
+from frontend.nodes.rainbow import GradiantNode, RainbowNode
 from frontend.enums.gradiant.gradiant_mode import GradiantMode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
 from frontend.nodes.visual import BarGraphChartNode
@@ -128,25 +128,28 @@ def main():
         alias="broadcast_addition",
     )
 
-    broadcast_addition_to_alpha = ValueTransformerPipelineNode(
-        input_value=broadcast_addition_heights.data,
-        input_value_interval=[0, 1],
-        output_value_interval=[0, 255],
-        alias="broadcast_addition_to_alpha",
-    )
-
-    rainbow_node_zero = RainbowNode(
+    gradiant_node_zero = GradiantNode(
         color_in=(255, 0, 12),
         color_out=(255, 132, 0),
         cycle=0,
+        alias="gradiant_node_zero"
+    )
+
+    rainbow_node_zero = RainbowNode(
+        gradiant=gradiant_node_zero.data,
         mode=GradiantMode.MIRROR,
         alias="rainbow_node_zero"
     )
 
-    rainbow_node_one = RainbowNode(
+    gradiant_node_one = GradiantNode(
         color_in=(0, 192, 255),
         color_out=(21, 0, 255),
         cycle=0,
+        alias="gradiant_node_one"
+    )
+
+    rainbow_node_one = RainbowNode(
+        gradiant=gradiant_node_one.data,
         mode=GradiantMode.MIRROR,
         alias="rainbow_node_one"
     )
@@ -172,7 +175,7 @@ def main():
 
     rgba_pipeline_node = RGBAPipelineNode(
         rgb=broadcast_addition_colors.data,
-        alpha=broadcast_addition_to_alpha.output_value,
+        alpha=broadcast_addition_heights.data,
         alias="rgba_pipeline_node",
     )
 

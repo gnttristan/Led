@@ -115,21 +115,29 @@ class FunctionNode(CNode):
 
     def __init__(
         self,
+        input_data: np.ndarray | None = None,
         number_points: int = FREQ_BINS,
         points: list[tuple[float, float]] | np.ndarray | None = None,
         render: bool = True,
         alias: str | None = None,
     ) -> None:
-        super().__init__(self.nodeName, {"number_points": {"io": "in"}, "data": {"io": "out"}}, render, alias=alias)
+        super().__init__(
+            self.nodeName,
+            {"input_data": {"io": "in"}, "number_points": {"io": "in"}, "data": {"io": "out"}},
+            render,
+            alias=alias,
+        )
+        self.input_data = Element(self, "input_data", ElementValue(input_data))
         self.number_points = Element(self, "number_points", ElementValue(number_points))
         self.points = Element(self, "points", ElementValue(normalized_points(points)), link_terminal=False)
-        self.data = Element(self, "data", ElementValue(np.zeros(int(self.number_points.value))))
+        self.data = Element(self, "data", ElementValue(np.zeros(self._data_shape())))
 
         self.edit_button = QtWidgets.QPushButton("Edit")
         self.edit_button.clicked.connect(self.open_editor)
         self.points.container_vchange_layout.addWidget(self.edit_button)
 
         self.number_points.valueChanged.connect(self._refresh_data)
+        self.input_data.valueChanged.connect(self._refresh_data)
         self._refresh_data()
 
     def open_editor(self) -> None:
@@ -139,6 +147,14 @@ class FunctionNode(CNode):
             self._refresh_data()
 
     def _refresh_data(self, *_args) -> None:
-        size = max(0, int(self.number_points.value))
+        shape = self._data_shape()
+        size = shape[0] if shape else 0
         points = normalized_points(self.points.value)
-        self.data.value = np.interp(np.linspace(0.0, 1.0, size), points[:, 0], points[:, 1])
+        data = np.interp(np.linspace(0.0, 1.0, size), points[:, 0], points[:, 1])
+        self.data.value = np.broadcast_to(data.reshape(-1, *([1] * (len(shape) - 1))), shape).copy()
+
+    def _data_shape(self) -> tuple[int, ...]:
+        input_data = self.input_data.value
+        if isinstance(input_data, np.ndarray):
+            return input_data.shape
+        return (max(0, int(self.number_points.value)),)

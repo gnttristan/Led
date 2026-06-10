@@ -33,5 +33,5 @@ class RGBAPipelineNode(VisualPipeline, CNode):
         rgb = self.rgb.value[:FREQ_BINS]
 
         self.rgba.value[:] = np.concatenate(
-            (rgb, self.alpha.value[:, np.newaxis]), axis=1
+            (rgb, self.alpha.value[:, np.newaxis] * 255.), axis=1
         )

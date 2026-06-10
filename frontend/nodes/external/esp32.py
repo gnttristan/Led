@@ -1,13 +1,9 @@
-import os
-import signal
-import subprocess
-import sys
+import socket
+import struct
 import threading
 import time
-from queue import Queue, Full
 
 import numpy as np
-import serial
 
 from config import DELAY_UPDATE, FREQ_BINS
 from backend.updatable.updatable import VisualUpdatable
@@ -22,8 +18,8 @@ class ESP32Node(CNode, VisualUpdatable):
     def __init__(
         self,
         rgb: np.ndarray = np.zeros((FREQ_BINS, 3), dtype=np.uint8),
-        script_path: str = "esp32/main.py",
-        port: str = "/dev/cu.usbserial-1410",
+        wled_ip: str = "192.168.1.17",
+        ddp_port: int = 4048,
         led_count: int = FREQ_BINS,
         render: bool = True,
         alias: str | None = None,
@@ -31,85 +27,136 @@ class ESP32Node(CNode, VisualUpdatable):
         terminals = {
             "rgb": {"io": "in"},
         }
+
         CNode.__init__(self, self.nodeName, terminals, render=render, alias=alias)
         VisualUpdatable.__init__(self)
 
         self.rgb = Element(self, "rgb", ElementValue(rgb))
-        self.script_path = Element(self, "script_path", ElementValue(script_path))
-        self.port = Element(self, "port", ElementValue(port))
+        self.wled_ip = Element(self, "wled_ip", ElementValue(wled_ip))
+        self.ddp_port = Element(self, "ddp_port", ElementValue(ddp_port))
         self.led_count = Element(self, "led_count", ElementValue(led_count))
-        self.serial = serial.Serial(self.port.value, 115200, timeout=1, write_timeout=1)
-        # self._reset_board()
+
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        # Reuse socket, useful when restarting your app often.
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        self.sequence = 0
+        self.running = True
+
         self.worker = threading.Thread(target=self._write_loop, daemon=True)
         self.worker.start()
 
     def c_update(self):
+        """
+        Kept for compatibility with your node system.
+
+        The actual sending is done in the background thread so WLED keeps
+        receiving frames even if c_update timing is irregular.
+        """
         pass
 
     def _write_loop(self):
-        while True:
-            self._write_frame(np.array(self.rgb.value, dtype=np.uint8).tobytes())
-            time.sleep(DELAY_UPDATE / 1000.0)
+        frame_period = DELAY_UPDATE / 1000.0
+        next_time = time.monotonic()
 
-    def _write_frame(self, frame):
-        try:
-            written = self.serial.write(frame)
-            print("wrote", written, "of", len(frame))
-            self.serial.flush()
-        except serial.SerialTimeoutException:
-            pass
-        except serial.SerialException:
-            self.serial = None
-
-    def _reset_board(self):
-        self._kill_port_users()
-        subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "mpremote",
-                "connect",
-                self.port.value,
-                "reset",
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        time.sleep(2)
-
-    def _kill_port_users(self):
-        result = subprocess.run(
-            ["lsof", "-t", self.port.value],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            check=False,
-        )
-
-        current_pid = os.getpid()
-        for line in result.stdout.splitlines():
-            if not line.strip():
-                continue
-
-            pid = int(line)
-            if pid == current_pid:
-                continue
-            if not self._is_mpremote_process(pid):
-                continue
-
+        while self.running:
             try:
-                os.kill(pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
+                frame = self._get_rgb_frame()
+                self._send_ddp_frame(frame)
+            except Exception as exc:
+                print(f"[WLED] Failed to send frame: {exc}")
 
-    def _is_mpremote_process(self, pid):
-        result = subprocess.run(
-            ["ps", "-p", str(pid), "-o", "command="],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            check=False,
+            next_time += frame_period
+            delay = next_time - time.monotonic()
+
+            if delay > 0:
+                time.sleep(delay)
+            else:
+                # If the backend is late, do not accumulate latency.
+                next_time = time.monotonic()
+
+    def _get_rgb_frame(self) -> bytes:
+        """
+        Converts the current rgb Element value to exactly led_count * 3 bytes.
+
+        Expected input shape:
+            (led_count, 3)
+
+        If the input has fewer LEDs, it pads black.
+        If the input has too many LEDs, it truncates.
+        """
+        rgb_array = np.asarray(self.rgb.value, dtype=np.uint8)
+
+        if rgb_array.ndim != 2 or rgb_array.shape[1] != 3:
+            raise ValueError(
+                f"Expected rgb array shape (N, 3), got {rgb_array.shape}"
+            )
+
+        led_count = int(self.led_count.value)
+
+        if rgb_array.shape[0] < led_count:
+            padded = np.zeros((led_count, 3), dtype=np.uint8)
+            padded[: rgb_array.shape[0]] = rgb_array
+            rgb_array = padded
+        elif rgb_array.shape[0] > led_count:
+            rgb_array = rgb_array[:led_count]
+
+        return rgb_array.tobytes()
+
+    def _send_ddp_frame(self, rgb_bytes: bytes):
+        """
+        Sends one full RGB frame to WLED using DDP over UDP.
+
+        WLED expects DDP on UDP port 4048 by default.
+        Payload is raw RGB bytes:
+            LED 0: R, G, B
+            LED 1: R, G, B
+            ...
+        """
+        led_count = int(self.led_count.value)
+        expected_len = led_count * 3
+
+        if len(rgb_bytes) != expected_len:
+            raise ValueError(
+                f"Expected {expected_len} RGB bytes, got {len(rgb_bytes)}"
+            )
+
+        flags = 0x41
+        sequence = self.sequence & 0x0F
+        data_type = 0x0A
+        destination = 0x01
+        data_offset = 0
+        data_len = len(rgb_bytes)
+
+        ddp_header = struct.pack(
+            ">BBBBIH",
+            flags,
+            sequence,
+            data_type,
+            destination,
+            data_offset,
+            data_len,
         )
-        command = result.stdout.strip()
-        return "mpremote" in command
+
+        packet = ddp_header + rgb_bytes
+
+        self.socket.sendto(
+            packet,
+            (self.wled_ip.value, int(self.ddp_port.value)),
+        )
+
+        self.sequence = (self.sequence + 1) & 0x0F
+
+    def close(self):
+        self.running = False
+
+        try:
+            self.worker.join(timeout=1.0)
+        except RuntimeError:
+            pass
+
+        try:
+            self.socket.close()
+        except OSError:
+            pass

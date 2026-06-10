@@ -40,5 +40,5 @@ class RGBPPipelineNode(VisualPipeline, CNode):
 
         self.output_rgb.value[:] = (
             rgb *
-            (np.power((self.alpha.value / 255), self.power_log.value)[:, None])
+            (np.power(self.alpha.value, self.power_log.value)[:, None])
         )

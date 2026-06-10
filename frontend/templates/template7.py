@@ -128,13 +128,6 @@ def main():
         alias="alpha_with_tide",
     )
 
-    alpha_with_tide_normalized = ValueTransformerPipelineNode(
-        input_value=alpha_with_tide.data,
-        input_value_interval=[0.0, 1],
-        output_value_interval=[0.0, 255.0],
-        alias="tide_alpha",
-    )
-
     tide_gradient_node = GradiantNode(
         color_in=(18, 235, 198),
         color_out=(238, 74, 146),
@@ -143,7 +136,7 @@ def main():
 
     rgba_pipeline_node = RGBAPipelineNode(
         rgb=tide_gradient_node.data,
-        alpha=alpha_with_tide_normalized.output_value,
+        alpha=alpha_with_tide.data,
         alias="tide_rgba",
     )
 

@@ -230,7 +230,7 @@ def main():
     capped_alpha = ValueTransformerPipelineNode(
         input_value=combined_alpha.data,
         input_value_interval=[0, 400],
-        output_value_interval=[0, 255],
+        output_value_interval=[0, 1],
         alias="capped_alpha",
     )
 

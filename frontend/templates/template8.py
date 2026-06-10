@@ -10,12 +10,13 @@ from frontend.group_nodes import KickDecayNode
 from frontend.nodes.broadcast.broadcast_addition import BroadcastAdditionNode
 from frontend.nodes.broadcast.broadcast_indexes import BroadcastIndexesNode
 from frontend.nodes.buffer import BufferNode
+from frontend.nodes.external import ESP32Node
 from frontend.nodes.function import FunctionNode
 from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.pipelines.amplitudes.avg_frequencies import AvgFrequenciesNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import SingleColorNode, RGBAPipelineNode, RollingNode
+from frontend.nodes.pipelines.visual import SingleColorNode, RGBAPipelineNode, RollingNode, RGBPPipelineNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow import GradiantNode, RainbowNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
@@ -119,25 +120,28 @@ def main():
         alias="broadcast_node",
     )
 
-    amplitudes_to_alpha = ValueTransformerPipelineNode(
-        input_value=broadcast_indexes_node.data,
-        input_value_interval=[0, 1],
-        output_value_interval=[0, 255],
-        alias="amplitudes_to_alpha",
-    )
-
-    rainbow_node_zero = RainbowNode(
+    gradiant_node_zero = GradiantNode(
         color_in=(255, 0, 135),
         color_out=(50, 50, 200),
         cycle=0,
+        alias="gradiant_node_zero"
+    )
+
+    rainbow_node_zero = RainbowNode(
+        gradiant=gradiant_node_zero.data,
         mode=GradiantMode.MIRROR,
         alias="rainbow_node_zero"
     )
 
-    rainbow_node_one = RainbowNode(
+    gradiant_node_one = GradiantNode(
         color_in=(200, 50, 50),
         color_out=(255, 200, 0),
         cycle=0,
+        alias="gradiant_node_one"
+    )
+
+    rainbow_node_one = RainbowNode(
+        gradiant=gradiant_node_one.data,
         mode=GradiantMode.MIRROR,
         alias="rainbow_node_one"
     )
@@ -161,9 +165,9 @@ def main():
     )
 
 
-    rgba_pipeline_node = RGBAPipelineNode(
+    rgbp_pipeline_node = RGBPPipelineNode(
         rgb=broadcast_addition.data,
-        alpha=amplitudes_to_alpha.output_value,
+        alpha=broadcast_indexes_node.data,
     )
 
     spectogram_chart_node = BarGraphChartNode(
@@ -172,9 +176,13 @@ def main():
         number_points=amplitudes_node.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
-        brushes=rgba_pipeline_node.rgba,
+        brushes=rgbp_pipeline_node.output_rgb,
         y_min=0,
         y_max=1,
+    )
+
+    esp32_node = ESP32Node(
+        rgb=rgbp_pipeline_node.output_rgb
     )
 
     flowchart = CFlowchart(

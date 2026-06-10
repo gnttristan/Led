@@ -14,7 +14,7 @@ class BroadcastAdditionNode(VisualPipeline, CNode):
         self,
         input_data: np.ndarray = np.zeros(1),
         secondary_data: np.ndarray = np.zeros(1),
-        level: np.ndarray = np.array([1]),
+        level: np.ndarray = np.array(1.0),
         render: bool = True,
         alias: str | None = None,
     ) -> None:
