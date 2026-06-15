@@ -2,7 +2,7 @@ import numpy as np
 
 from backend.updatable.updatable import VisualUpdatable
 from config import FREQ_BINS
-from frontend.components.elements.bar_graph_chart import BarGraphChartElement
+from frontend.components.elements.chart.bar_graph_chart import BarGraphChartElement
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.components.elements.textedit.textedit import TextEdit
