@@ -1,8 +1,40 @@
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QColor, QFont, QPainter
 from PyQt5 import QtCore, QtWidgets
 
 from frontend.components.elements.element_value import ElementValue
+
+
+class SeekBar(QtWidgets.QWidget):
+    seekChanged = QtCore.pyqtSignal(float)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.ratio = 0.0
+        self.setMinimumSize(120, 14)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+
+    def set_ratio(self, ratio):
+        self.ratio = max(0.0, min(1.0, float(ratio)))
+        self.update()
+
+    def mousePressEvent(self, event):
+        self._seek(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.MouseButton.LeftButton:
+            self._seek(event)
+
+    def _seek(self, event):
+        self.set_ratio(event.x() / max(1, self.width()))
+        self.seekChanged.emit(self.ratio)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        rect = self.rect().adjusted(0, 4, 0, -4)
+        fill_width = int(rect.width() * self.ratio)
+        painter.fillRect(rect, QColor("#1c1f23"))
+        painter.fillRect(rect.adjusted(0, 0, fill_width - rect.width(), 0), QColor("#69a7e8"))
 
 
 class MusicPlayer(QtWidgets.QWidget):
@@ -23,7 +55,8 @@ class MusicPlayer(QtWidgets.QWidget):
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setFixedSize(self.WIDTH, self.HEIGHT)
+        self.setMinimumWidth(self.WIDTH)
+        self.setFixedHeight(self.HEIGHT)
 
         self.index = index
         self.artist = artist
@@ -51,17 +84,13 @@ class MusicPlayer(QtWidgets.QWidget):
         hbox_player = QtWidgets.QHBoxLayout()
         self.play_pause_button = QtWidgets.QPushButton("Play")
 
-        self.music_position_label = QtWidgets.QLabel(f"{self.music_position.value:.2f}")
-        self.music_length_label = QtWidgets.QLabel(f"{self.music_length:.2f}")
+        self.music_position_label = QtWidgets.QLabel(self.format_time(self.music_position.value))
+        self.music_length_label = QtWidgets.QLabel(self.format_time(self.music_length))
         self.music_position_label.setFont(font)
         self.music_length_label.setFont(font)
 
-        self.music_position_slider = QtWidgets.QSlider()
-        self.music_position_slider.setOrientation(Qt.Orientation.Horizontal)
-        self.music_position_slider.setRange(0, 1000)
-        self.music_position_slider.setValue(0)
-        self.music_position_slider.setFixedWidth(200)
-        self.music_position_slider.sliderMoved.connect(self.on_slider_moved)
+        self.music_position_slider = SeekBar()
+        self.music_position_slider.seekChanged.connect(self.on_slider_moved)
         self.play_pause_button.clicked.connect(self.on_play_pause_clicked)
 
         hbox_player.addWidget(self.play_pause_button)
@@ -89,13 +118,27 @@ class MusicPlayer(QtWidgets.QWidget):
         self.play_pause_button.setText("Pause" if self.is_playing else "Play")
 
     def set_from_ratio(self, slider_value):
-        position = float(slider_value) * float(self.music_length) / 1000.0
+        position = float(slider_value) * float(self.music_length)
+        self.set_position(position)
+
+    def set_position(self, position):
+        position = max(0.0, min(float(position), float(self.music_length or 0)))
         self.music_position.value = position
-        self.music_position_label.setText(f"{position:.2f}")
+        self.music_position_label.setText(self.format_time(position))
+        slider_value = 0 if not self.music_length else position / float(self.music_length)
+        if self.music_position_slider.ratio != slider_value:
+            self.music_position_slider.blockSignals(True)
+            self.music_position_slider.set_ratio(slider_value)
+            self.music_position_slider.blockSignals(False)
+
+    @staticmethod
+    def format_time(seconds):
+        seconds = max(0, int(float(seconds)))
+        return f"{seconds // 60}:{seconds % 60:02d}"
 
     def on_slider_moved(self, slider_value):
         self.set_from_ratio(slider_value)
-        self.seekChanged.emit(self.index, float(slider_value) / 1000.0)
+        self.seekChanged.emit(self.index, float(slider_value))
 
     def on_play_pause_clicked(self):
         if self.is_playing:

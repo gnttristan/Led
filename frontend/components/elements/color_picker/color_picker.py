@@ -3,6 +3,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from frontend.components.elements.element import Element
 from frontend.overrides.CNode import CNode
+from frontend.overrides.node_style import color_button_stylesheet
 
 
 class ColorPicker(Element):
@@ -23,7 +24,7 @@ class ColorPicker(Element):
         self.controls_layout.setSpacing(4)
 
         self.color_button = QtWidgets.QPushButton()
-        self.color_button.setFixedSize(64, 24)
+        self.color_button.setFixedSize(74, 24)
         self.color_button.clicked.connect(self.open_color_dialog)
         self.controls_layout.addWidget(self.color_button)
 
@@ -65,11 +66,5 @@ class ColorPicker(Element):
 
         self.color_button.blockSignals(True)
         self.color_button.setText(hex_value)
-        self.color_button.setStyleSheet(
-            "QPushButton {"
-            f"background-color: {hex_value};"
-            "border: 1px solid #666;"
-            "color: white;"
-            "}"
-        )
+        self.color_button.setStyleSheet(color_button_stylesheet(hex_value))
         self.color_button.blockSignals(False)

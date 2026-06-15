@@ -16,7 +16,7 @@ class PlaylistPlayer(QtWidgets.QWidget):
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setFixedWidth(300)
+        self.setMinimumWidth(300)
         self.music_players = []
         self.playlist_metadata = playlist_metadata or []
 
@@ -67,6 +67,10 @@ class PlaylistPlayer(QtWidgets.QWidget):
     def set_loaded(self, index, loaded=True):
         if 0 <= index < len(self.music_players):
             self.music_players[index].set_loaded(loaded)
+
+    def set_position(self, index, position):
+        if 0 <= index < len(self.music_players):
+            self.music_players[index].set_position(position)
 
     def on_play_clicked(self, index):
         for i, player in enumerate(self.music_players):

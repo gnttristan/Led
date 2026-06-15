@@ -50,6 +50,32 @@ from frontend.nodes.windows_fcts.ceil_window_fct import CeilWindowFct
 from frontend.nodes.windows_fcts.decreasing_avg_window_fct import DecreasingAvgWindowFct
 from frontend.nodes.windows_fcts.max_window_fct import MaxWindowFct
 
+NODE_DIRECTORY_COLORS = {
+    "frontend.nodes.broadcast": "#c56f38",
+    "frontend.nodes.buffer": "#4f86c6",
+    "frontend.nodes.external": "#b84f58",
+    "frontend.nodes.features": "#39a071",
+    "frontend.nodes.function": "#b89a3f",
+    "frontend.nodes.group_node": "#8f60b8",
+    "frontend.nodes.pipelines": "#7b5cc7",
+    "frontend.nodes.playlist_player": "#4f86c6",
+    "frontend.nodes.rainbow": "#b89a3f",
+    "frontend.nodes.routing_node": "#8f60b8",
+    "frontend.nodes.simple": "#39a071",
+    "frontend.nodes.stream": "#b84f58",
+    "frontend.nodes.visual": "#4f86c6",
+    "frontend.nodes.window": "#8f60b8",
+    "frontend.nodes.windows_fcts": "#b89a3f",
+}
+
+
+def node_color_for_module(module_name: str) -> str:
+    for directory, color in sorted(NODE_DIRECTORY_COLORS.items(), key=lambda item: len(item[0]), reverse=True):
+        if module_name == directory or module_name.startswith(f"{directory}."):
+            return color
+    return "#7b5cc7"
+
+
 nodes = [
     ESP32Node,
     KickDecayNode,

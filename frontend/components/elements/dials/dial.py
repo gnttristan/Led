@@ -26,10 +26,10 @@ class Dial(Element):
         self.controls_container = QtWidgets.QWidget()
         self.controls_layout = QtWidgets.QHBoxLayout(self.controls_container)
         self.controls_layout.setContentsMargins(0, 0, 0, 0)
-        self.controls_layout.setSpacing(4)
+        self.controls_layout.setSpacing(5)
 
         self.dial = QtWidgets.QDial()
-        self.dial.setFixedSize(40, 40)
+        self.dial.setFixedSize(34, 34)
         self.dial.setContentsMargins(0, 0, 0, 0)
         self.dial.setRange(0, self.steps)
         self.dial.setValue(self.to_dial())
@@ -39,7 +39,7 @@ class Dial(Element):
         self.controls_layout.addWidget(self.dial)
 
         self.value_edit = QtWidgets.QLineEdit()
-        self.value_edit.setFixedSize(40, 40)
+        self.value_edit.setFixedSize(58, 26)
         self.value_edit.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.value_edit.editingFinished.connect(self.set_from_line_edit)
         self.controls_layout.addWidget(self.value_edit)

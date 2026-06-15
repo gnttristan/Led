@@ -38,7 +38,7 @@ class Element(QtWidgets.QWidget):
             f"min:{float(np.min(x)):.2f} "
             f"avg:{float(np.mean(x)):.2f} "
             f"max:{float(np.max(x)):.2f} "
-            f"shape:{x.shape}"
+            f"s:{x.shape}"
         )
 
     str_trsf = {
@@ -117,6 +117,7 @@ class Element(QtWidgets.QWidget):
         self._array_refresh_pending = False
 
         super().__init__()
+        self.setProperty("ledRole", "elementRow")
         self.arrayValueMutated.connect(self._flush_array_value_mutation, QtCore.Qt.QueuedConnection)
 
         if isinstance(value, ElementValue):
@@ -131,11 +132,12 @@ class Element(QtWidgets.QWidget):
             self._set_child_parent(value)
             self._store_value(value)
 
-        self.hbox_elements = self._layout(QtWidgets.QHBoxLayout, alignment=self.LEFT_TOP)
+        self.hbox_elements = self._layout(QtWidgets.QHBoxLayout, spacing=6, alignment=self.LEFT_TOP)
+        self.hbox_elements.setContentsMargins(0, 4, 0, 4)
         self.setLayout(self.hbox_elements)
 
         font = QFont()
-        font.setPointSize(8)
+        font.setPointSize(9)
 
         terminal_name = self.name.lower()
         terminal_opts = node.pending_terminals.get(terminal_name)
@@ -144,7 +146,9 @@ class Element(QtWidgets.QWidget):
         self.hbox_elements.addWidget(left_terminal_placeholder)
 
         name_label = QtWidgets.QLabel(name)
-        name_label.setFixedWidth(100)
+        name_label.setProperty("ledRole", "elementName")
+        name_label.setMinimumWidth(104)
+        name_label.setMaximumWidth(132)
         name_label.setFont(font)
         self.hbox_elements.addWidget(name_label)
 
@@ -152,8 +156,9 @@ class Element(QtWidgets.QWidget):
         self.hbox_elements.addStretch()
 
         self.container_vchange = QtWidgets.QWidget()
-        self.container_vchange.setMinimumWidth(100)
-        self.container_vchange_layout = self._layout(QtWidgets.QHBoxLayout, self.container_vchange)
+        self.container_vchange.setProperty("ledRole", "valueControls")
+        self.container_vchange.setMinimumWidth(112)
+        self.container_vchange_layout = self._layout(QtWidgets.QHBoxLayout, self.container_vchange, spacing=5)
         self.hbox_elements.addWidget(self.container_vchange)
 
         right_terminal_placeholder = self._terminal_placeholder(node.TERMINAL_WIDTH)
@@ -237,6 +242,10 @@ class Element(QtWidgets.QWidget):
 
         value_label = QtWidgets.QLabel(self.format_value(value))
         value_label.setMinimumWidth(80)
+        value_label.setMaximumWidth(220)
+        value_label.setWordWrap(False)
+        value_label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
+        value_label.setProperty("ledRole", "elementValue")
         value_label.setFont(font)
         self.value_label = value_label
         return value_label

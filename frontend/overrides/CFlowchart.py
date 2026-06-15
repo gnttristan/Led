@@ -11,6 +11,7 @@ from backend.updatable.updatable import pause_updates, audio_updatable_objects, 
 from config import NODE_LAYOUT_X_GAP, NODE_LAYOUT_Y_GAP
 from frontend.components.ui.create_node_form import CreateNodeForm
 from frontend.overrides.CNode import CNode
+from frontend.overrides.node_style import GRAPH_STYLESHEET
 
 
 class CFlowchart(Flowchart):
@@ -23,6 +24,8 @@ class CFlowchart(Flowchart):
 
     def __init__(self, nodes=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.widget().setStyleSheet(GRAPH_STYLESHEET)
+        # getattr(self.widget(), "chartWidget", self.widget()).setBackground("#171819")
         self.widget().installEventFilter(self)
         self.inputNode.graphicsItem().hide()
         self.outputNode.graphicsItem().hide()

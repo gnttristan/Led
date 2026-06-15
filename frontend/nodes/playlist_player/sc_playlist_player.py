@@ -3,6 +3,7 @@ import pickle
 import tempfile
 import threading
 import hashlib
+import time
 from urllib.parse import unquote, urlparse
 
 import numpy as np
@@ -27,11 +28,11 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
     trackLoaded = QtCore.pyqtSignal(int)
 
     def __init__(self,
-             playlist_url: str = "https://soundcloud.com/trg-electro/sets/led3",
+             playlist_url: str = "https://soundcloud.com/trg-electro/sets/led",
              browser: str = "chrome",
              profile: str = "Default",
              prefetch_seconds: int | float = 10,
-             cache: bool = False,
+             cache: bool = True,
              render: bool = True,
              alias: str | None = None
         ) -> None:
@@ -41,6 +42,7 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
             render=render,
             alias=alias,
         )
+        AudioUpdatable.__init__(self)
         self.playlist_url = TextEdit(self, "playlist_url", ElementValue(playlist_url))
         self.browser = TextEdit(self, "browser", ElementValue(browser))
         self.profile = TextEdit(self, "profile", ElementValue(profile))
@@ -65,6 +67,8 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
         self._seek_ratios = []
         self._current_track_index = -1
         self._is_playing = False
+        self._track_started_at = 0.0
+        self._track_start_position = 0.0
 
         if playlist_url:
             self.start()
@@ -191,6 +195,14 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
             self.trackLoaded.emit(idx)
 
     def on_track_loaded(self, index):
+        with self._data_lock:
+            track = self._tracks[index]
+        if track is not None and 0 <= index < len(self.playlist_player.music_players):
+            audio, sr = track
+            duration = audio.shape[0] / float(sr or SAMPLE_RATE)
+            music_player = self.playlist_player.music_players[index]
+            music_player.music_length = duration
+            music_player.music_length_label.setText(music_player.format_time(duration))
         self.playlist_player.set_loaded(index, True)
         self._refresh_node_ui_geometry()
 
@@ -213,6 +225,9 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
             return
         audio, sr = track
         start = int(ratio * audio.shape[0])
+        self._track_start_position = start / float(sr or SAMPLE_RATE)
+        self._track_started_at = time.monotonic()
+        self.playlist_player.set_position(index, self._track_start_position)
         self.audio.value = audio[start:]
         self.sample_rate.value = int(sr)
         self.enqueue_token.value = int(self.enqueue_token.value) + 1
@@ -223,6 +238,7 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
             return
         self.audio.value = np.zeros((0, 2), dtype=np.float32)
         self.enqueue_token.value = int(self.enqueue_token.value) + 1
+        self._seek_ratios[index] = self._current_position_ratio()
         self._is_playing = False
 
     def on_seek_requested(self, index, ratio):
@@ -233,9 +249,39 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
             return
         audio, sr = track
         start = int(float(ratio) * audio.shape[0])
+        self._track_start_position = start / float(sr or SAMPLE_RATE)
+        self._track_started_at = time.monotonic()
+        self.playlist_player.set_position(index, self._track_start_position)
         self.audio.value = audio[start:]
         self.sample_rate.value = int(sr)
         self.enqueue_token.value = int(self.enqueue_token.value) + 1
+
+    def _current_position_ratio(self):
+        if self._current_track_index < 0:
+            return 0.0
+        with self._data_lock:
+            track = self._tracks[self._current_track_index]
+        if track is None:
+            return 0.0
+        audio, sr = track
+        duration = audio.shape[0] / float(sr or SAMPLE_RATE)
+        if duration <= 0:
+            return 0.0
+        return min(1.0, self._current_position() / duration)
+
+    def _current_position(self):
+        if not self._is_playing:
+            return self._track_start_position
+        return self._track_start_position + time.monotonic() - self._track_started_at
+
+    def _update_playback_position(self):
+        if self._current_track_index < 0 or not self._is_playing:
+            return
+        position = self._current_position()
+        self.playlist_player.set_position(self._current_track_index, position)
+        ratio = self._current_position_ratio()
+        with self._data_lock:
+            self._seek_ratios[self._current_track_index] = ratio
 
     def start(self):
         if self._thread is not None and self._thread.is_alive():
@@ -251,4 +297,5 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
         self._is_playing = False
 
     def c_update(self):
+        self._update_playback_position()
         return self.audio

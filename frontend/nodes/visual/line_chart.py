@@ -2,7 +2,7 @@ import numpy as np
 
 from backend.updatable.updatable import VisualUpdatable
 from frontend.components.elements.element_value import ElementValue
-from frontend.components.elements.line_chart_element import LineChartElement
+from frontend.components.elements.chart.line_chart_element import LineChartElement
 from frontend.components.elements.element import Element
 from frontend.components.elements.textedit.textedit import TextEdit
 from frontend.overrides.CNode import CNode

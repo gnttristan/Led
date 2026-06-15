@@ -3,7 +3,7 @@ import numpy as np
 import pyqtgraph as pg
 from PyQt5 import sip
 
-from frontend.components.elements.chart_element import ChartElement
+from frontend.components.elements.chart.chart_element import ChartElement
 
 
 class LineChartElement(ChartElement):

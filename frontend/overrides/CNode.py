@@ -8,13 +8,19 @@ from PyQt5 import sip
 from pyqtgraph.flowchart import Node
 
 from frontend.overrides.CTerminal import CTerminal
+from frontend.overrides.node_style import (
+    NODE_WIDGET_STYLESHEET,
+    apply_node_graphics_style,
+    node_accent,
+    style_terminal,
+)
 
 
 class CNode(Node):
     sig_initiated = QtCore.pyqtSignal()
     INNER_MARGIN = 10
-    TERMINAL_WIDTH = 40
-    TITLE_OFFSET = 24
+    TERMINAL_WIDTH = 22
+    TITLE_OFFSET = 26
     _SERDE_TAG = "__cnode_serde__"
     _STATE_IGNORED_PARAMS = {"self", "render", "alias"}
 
@@ -44,9 +50,13 @@ class CNode(Node):
         QtCore.QTimer.singleShot(0, self.init_all)
 
     def init_all(self):
+        self.apply_style()
         self.init_terminals()
         self.init_elements()
         self.connect_position_refresh()
+
+    def apply_style(self):
+        apply_node_graphics_style(super().graphicsItem(), self.alias, self.__class__.__module__)
 
     def connect_position_refresh(self):
         if getattr(self, "_position_refresh_connected", False):
@@ -190,11 +200,13 @@ class CNode(Node):
 
         item = super().graphicsItem()
         container = QtWidgets.QWidget()
-        container.setStyleSheet("border: 1px solid #666;")
+        container.setObjectName("LedNodeBody")
+        container.setStyleSheet(NODE_WIDGET_STYLESHEET)
+        # install_shadow(container)
         self._elements_container = container
 
         elements_vbox = QtWidgets.QVBoxLayout(container)
-        elements_vbox.setContentsMargins(0, 0, 0, 0)
+        elements_vbox.setContentsMargins(0, 2, 0, 0)
         elements_vbox.setSpacing(0)
 
         for element in self._live_elements():
@@ -219,12 +231,20 @@ class CNode(Node):
 
     def refresh_terminal_positions(self):
         self.refresh_parents_sizes()
+        self._style_terminals()
 
         for element in self._live_elements():
             if hasattr(element, "attach_terminal"):
                 element.attach_terminal(self.TITLE_OFFSET, self.INNER_MARGIN)
         for child_node in self.child_nodes():
             child_node.refresh_terminal_positions()
+
+    def _style_terminals(self):
+        accent = node_accent(self.__class__.__module__)
+        for terminal in self.terminals.values():
+            terminal_item = terminal.graphicsItem()
+            terminal_item.setZValue(100)
+            style_terminal(terminal_item, "in" if terminal.isInput() else "out", accent)
 
     def _live_elements(self):
         live_elements = [

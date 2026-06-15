@@ -20,7 +20,7 @@ class Dropbox(Element):
 
         self.items = list(items)
         self.combobox = CComboBox()
-        self.combobox.setFixedSize(100, 20)
+        self.combobox.setFixedSize(118, 24)
         self.combobox.setContentsMargins(0, 0, 0, 0)
         self.combobox.setMinimumContentsLength(10)
         self.combobox.view().setTextElideMode(QtCore.Qt.TextElideMode.ElideRight)
