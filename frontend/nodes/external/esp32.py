@@ -18,7 +18,7 @@ class ESP32Node(CNode, VisualUpdatable):
     def __init__(
         self,
         rgb: np.ndarray = np.zeros((FREQ_BINS, 3), dtype=np.uint8),
-        wled_ip: str = "192.168.1.17",
+        wled_ip: str = "192.168.1.112",
         ddp_port: int = 4048,
         led_count: int = FREQ_BINS,
         render: bool = True,
