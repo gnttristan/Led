@@ -7,7 +7,6 @@ from frontend.components.elements.element_value import ElementValue
 from frontend.overrides.CComboBox import CComboBox
 from frontend.overrides.CNode import CNode
 
-
 class NodeSelector(Element):
     def __init__(
         self,
@@ -63,6 +62,26 @@ class NodeSelector(Element):
         self.container_vchange_layout.addWidget(self.controls_container)
         if initial_element is not None:
             self.set_default_element(initial_element)
+
+    def _is_pointer_over_selector(self, scene_pos=None):
+        if scene_pos is None:
+            return False
+        proxy = getattr(self.node, "_elements_proxy", None)
+        if proxy is None or proxy.widget() is None:
+            return False
+        local_pos = proxy.mapFromScene(scene_pos)
+        widget = proxy.widget().childAt(int(local_pos.x()), int(local_pos.y()))
+        return widget is self or (widget is not None and self.isAncestorOf(widget))
+
+    def _set_drop_hover(self, hovered):
+        super()._set_drop_hover(hovered)
+
+    def _set_element_from_terminal(self, terminal):
+        owner = getattr(terminal.node(), "obj", terminal.node())
+        element_name = owner.terminal_element_name(terminal.name())
+        element = getattr(owner, element_name, None)
+        if isinstance(element, Element):
+            self.set_default_element(element)
 
     def extract_selection_node_names(self):
         return list(map(lambda x: x.name(), self.selection_nodes.value))
@@ -133,6 +152,15 @@ class NodeSelector(Element):
         self.selection_elements_combobox.blockSignals(False)
         self.value = lambda: self.selected_element.value
 
+    def eventFilter(self, watched, event):
+        super().eventFilter(watched, event)
+        if event.type == QtCore.QEvent.Type.GraphicsSceneMouseRelease and self._dragged_terminal is not None:
+            if self._is_pointer_over_selector(event.scenePos()):
+                self._set_element_from_terminal(self._dragged_terminal)
+            self._dragged_terminal = None
+            self._set_drop_hover(False)
+        return False
+
+
     def after_ui_init(self, placeholder_element):
         self.set_default_element(placeholder_element.selected_element)
-

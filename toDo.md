@@ -1,13 +1,7 @@
-1) Better logic for element -> link_terminal
-2) Change 
-        if callable(getattr(self._value_ref, "_value", None)):
-            self._dynamic_label_timer = QtCore.QTimer(self)
-            self._dynamic_label_timer.timeout.connect(self.refresh_value_label)
-            self._dynamic_label_timer.start(250)
-in element l100
-
-Features
-1) Operator node logic
-2) RMS
-3) AmplitudeTransformerNode with input_value and data ?
-4) QtViz for graphes
+- Make terminals a bit bigger and not black on black (not visible)
+- When an element dotted border is visible (on terminal dragging) set it's background different
+- Make node backgrounds a bit more gray but still dark
+- Move multi line chart element into frontend/components/elements/chart
+- Rename line chart node to multi line chart node
+- On element (or in other part if you find it better for architecture) :
+  - If value ndarray 1d make a little visualization button at the right that when clicked it adds / remove to the CNode a LineChartElement just under the corresponding element tracking its data

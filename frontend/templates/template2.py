@@ -3,6 +3,7 @@ import sys
 from PyQt5 import QtCore, QtWidgets
 
 from config import DELAY_UPDATE, SAMPLE_RATE
+from frontend.enums.gradiant.gradiant_mode import GradiantMode
 from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
@@ -127,9 +128,9 @@ def main():
     gradiant = GradiantNode(cycle=1, alias="gradiant")
 
     gradient_rainbow = RainbowNode(
-        inv_fraction=0.2,
         gradiant=gradiant.data,
         alias="gradient_rainbow",
+        mode=GradiantMode.MIRROR
     )
 
     rolling_rainbow = RollingNode(
@@ -144,16 +145,9 @@ def main():
         alias="colorize_pipeline",
     )
 
-    amplitudes_to_alpha = ValueTransformerPipelineNode(
-        input_value=amplitudes_with_rms.data,
-        input_value_interval=[0, 1],
-        output_value_interval=[0, 255],
-        alias="amplitudes_to_alpha",
-    )
-
     rgbp_pipeline = RGBPPipelineNode(
         rgb=colorize_pipeline.data,
-        alpha=amplitudes_to_alpha.output_value,
+        alpha=amplitudes_with_rms.data,
         alias="rgbp_pipeline",
     )
 

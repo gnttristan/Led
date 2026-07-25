@@ -1,4 +1,5 @@
 import inspect
+import weakref
 
 import networkx as nx
 import numpy as np
@@ -6,12 +7,15 @@ from PyQt5 import QtCore
 from pyqtgraph.debug import printExc
 from pyqtgraph.flowchart import Flowchart
 from pyqtgraph.flowchart.Node import Node
+from pyqtgraph.flowchart.Terminal import TerminalGraphicsItem
 
 from backend.updatable.updatable import pause_updates, audio_updatable_objects, visual_updatable_objects
 from config import NODE_LAYOUT_X_GAP, NODE_LAYOUT_Y_GAP
+from frontend.components.elements.element import Element
 from frontend.components.ui.create_node_form import CreateNodeForm
 from frontend.overrides.CNode import CNode
 from frontend.overrides.node_style import GRAPH_STYLESHEET
+from frontend.ui_features.add_node import AddNodeFeature
 
 
 class CFlowchart(Flowchart):
@@ -24,7 +28,11 @@ class CFlowchart(Flowchart):
 
     def __init__(self, nodes=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._drag_elements = weakref.WeakSet()
+        self._dragged_terminal = None
+        QtCore.QCoreApplication.instance().installEventFilter(self)
         self.widget().setStyleSheet(GRAPH_STYLESHEET)
+        self.add_node_feature = AddNodeFeature(self)
         # getattr(self.widget(), "chartWidget", self.widget()).setBackground("#171819")
         self.widget().installEventFilter(self)
         self.inputNode.graphicsItem().hide()
@@ -35,6 +43,25 @@ class CFlowchart(Flowchart):
         QtCore.QTimer.singleShot(0, lambda: self.place_nodes())
 
     def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.Type.GraphicsSceneMousePress and event.button() == QtCore.Qt.MouseButton.LeftButton:
+            element = next(iter(self._drag_elements), None)
+            scene = element.node.graphicsItem().scene() if element is not None else None
+            for item in scene.items(event.scenePos()) if scene is not None else []:
+                if isinstance(item, TerminalGraphicsItem):
+                    self._dragged_terminal = item.term
+                    break
+        elif event.type() == QtCore.QEvent.Type.GraphicsSceneMouseMove and self._dragged_terminal is not None:
+            incoming = Element._element_from_terminal(self._dragged_terminal)
+            for element in self._drag_elements:
+                element._set_drop_hover(incoming is not None and element.check_connect_by_drag(incoming))
+        elif event.type() == QtCore.QEvent.Type.GraphicsSceneMouseRelease and self._dragged_terminal is not None:
+            for element in self._drag_elements:
+                if element._is_pointer_over_selector(event.scenePos()):
+                    element._set_element_from_terminal(self._dragged_terminal)
+                    break
+            for element in self._drag_elements:
+                element._set_drop_hover(False)
+            self._dragged_terminal = None
         if event.type() in self.PAUSE_EVENTS:
             pause_updates()
         return False
@@ -72,6 +99,7 @@ class CFlowchart(Flowchart):
         self.addNode(node, name, pos)
         if hasattr(node, "init_all"):
             node.init_all()
+            self._drag_elements.update(element for element in node.elements if isinstance(element, Element))
         draw = getattr(node, "draw", None)
         if callable(draw):
             QtCore.QTimer.singleShot(0, draw)
@@ -208,6 +236,7 @@ class CFlowchart(Flowchart):
         if name is None and hasattr(node, "name"):
             name = node.name()
         self.addNode(node, name, pos)
+        self._drag_elements.update(element for element in node.elements if isinstance(element, Element))
         return node
 
     def get_visible_nodes(self):

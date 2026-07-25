@@ -181,9 +181,9 @@ def main():
         y_max=1,
     )
 
-    esp32_node = ESP32Node(
-        rgb=rgbp_pipeline_node.output_rgb
-    )
+    # esp32_node = ESP32Node(
+    #     rgb=rgbp_pipeline_node.output_rgb
+    # )
 
     flowchart = CFlowchart(
         terminals={

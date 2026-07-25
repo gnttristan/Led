@@ -2,6 +2,9 @@ import numpy as np
 from PyQt5 import QtWidgets
 from pyqtgraph.flowchart.Terminal import Terminal
 
+from frontend.overrides.CConnectionItem import CConnectionItem
+from frontend.overrides.node_style import node_accent
+
 
 class CTerminal(Terminal):
     _MISSING = object()
@@ -25,6 +28,11 @@ class CTerminal(Terminal):
         output_value = self._terminal_value(output_term)
         input_value = self._terminal_value(input_term)
 
+        if output_term.connectedTo(input_term):
+            if connectionItem is not None:
+                connectionItem.close()
+            return output_term.connections()[input_term]
+
         if (
             output_value is not self._MISSING
             and input_value is not self._MISSING
@@ -39,7 +47,16 @@ class CTerminal(Terminal):
             print(f"Terminal '{input_term.name()}' is already connected")
             return None
 
-        return Terminal.connectTo(self, term, connectionItem=connectionItem)
+        if connectionItem is not None:
+            connectionItem.close()
+
+        connection_item = CConnectionItem(
+            output_term.graphicsItem(),
+            input_term.graphicsItem(),
+            color=node_accent(output_term.node().__class__.__module__),
+        )
+
+        return Terminal.connectTo(self, term, connectionItem=connection_item)
 
     def _ordered_terms(self, term):
         return (term, self) if self.isInput() else (self, term)

@@ -28,7 +28,7 @@ class SCPlaylistPlayer(CNode, AudioUpdatable):
     trackLoaded = QtCore.pyqtSignal(int)
 
     def __init__(self,
-             playlist_url: str = "https://soundcloud.com/trg-electro/sets/led",
+             playlist_url: str = "https://soundcloud.com/trg-electro/sets/led3",
              browser: str = "chrome",
              profile: str = "Default",
              prefetch_seconds: int | float = 10,

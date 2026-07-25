@@ -41,6 +41,7 @@ class LineChartElement(ChartElement):
         plot.showGrid(x=True, y=True)
         x = np.arange(self.number_points)
         self.line = plot.plot(x, np.zeros(self.number_points), pen="b")
+        self.node.window.setFixedSize(500, 150)
         self.node.window.show()
         return self.node.window
 

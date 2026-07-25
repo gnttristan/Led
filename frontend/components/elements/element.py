@@ -1,6 +1,9 @@
+from typing import Any
+
 import numpy as np
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QPainter, QPen
 from PyQt5 import QtCore, QtWidgets
+from pyqtgraph.flowchart.Terminal import TerminalGraphicsItem
 
 from frontend.components.elements.element_value import ElementValue
 from frontend.overrides.CNode import CNode
@@ -126,6 +129,7 @@ class Element(QtWidgets.QWidget):
 
         if isinstance(value, Element):
             self.value = value
+            value.valueChanged.connect(lambda v: self.valueChanged.emit(v))
             if self.link_terminal and self.node.parent is None:
                 QtCore.QTimer.singleShot(0, lambda: self.connect_terminal(value))
         else:
@@ -179,6 +183,9 @@ class Element(QtWidgets.QWidget):
             None,
         )
         self.mapped_output_terminal_placeholder = right_terminal_placeholder
+
+        self._dragged_terminal = None
+        self._drop_hover = False
 
         if register_in_node:
             self.node.elements.append(self)
@@ -296,6 +303,74 @@ class Element(QtWidgets.QWidget):
 
     def check_value(self, placeholder_value):
         return True, None
+
+    def _install_drag_filter(self):
+        application = QtWidgets.QApplication.instance()
+        if application is not None:
+            application.installEventFilter(self)
+
+    def _is_pointer_over_selector(self, scene_pos=None):
+        if scene_pos is None:
+            return False
+        proxy = getattr(self.node, "_elements_proxy", None)
+        if proxy is None or proxy.widget() is None:
+            return False
+        local_pos = proxy.mapFromScene(scene_pos)
+        widget = proxy.widget().childAt(int(local_pos.x()), int(local_pos.y()))
+        return widget is self or (widget is not None and self.isAncestorOf(widget))
+
+    def _set_drop_hover(self, hovered):
+        if self._drop_hover == hovered:
+            return
+        self._drop_hover = hovered
+        self.update()
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._drop_hover:
+            painter = QPainter(self)
+            painter.setPen(QPen(QtCore.Qt.GlobalColor.white, 1, QtCore.Qt.PenStyle.DotLine))
+            painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
+
+    def eventFilter(self, watched, event):
+        event_type = event.type()
+        if event_type == QtCore.QEvent.Type.GraphicsSceneMousePress:
+            if event.button() == QtCore.Qt.MouseButton.LeftButton:
+                scene = self.node.graphicsItem().scene()
+                for item in scene.items(event.scenePos()) if scene is not None else []:
+                    if isinstance(item, TerminalGraphicsItem):
+                        self._dragged_terminal = item.term
+                        break
+        elif event_type == QtCore.QEvent.Type.GraphicsSceneMouseMove:
+            if self._dragged_terminal is not None:
+                incoming = self._element_from_terminal(self._dragged_terminal)
+                self._set_drop_hover(incoming is not None and self.check_connect_by_drag(incoming))
+        elif event_type == QtCore.QEvent.Type.GraphicsSceneMouseRelease:
+            if self._dragged_terminal is not None:
+                if self._is_pointer_over_selector(event.scenePos()):
+                    self._dragged_terminal.connectTo(self.node[self.name.lower()])
+                self._dragged_terminal = None
+                self._set_drop_hover(False)
+        return False
+
+    @staticmethod
+    def _element_from_terminal(terminal):
+        owner = getattr(terminal.node(), "obj", terminal.node())
+        element_name = owner.terminal_element_name(terminal.name())
+        element = getattr(owner, element_name, None)
+        return element if isinstance(element, Element) else None
+
+    def _set_element_from_terminal(self, terminal):
+        if self.terminal_io == "in":
+            terminal.connectTo(self.node[self.terminal_name])
+
+    def check_connect_by_drag(self, incoming):
+        if isinstance(incoming.value, np.ndarray):
+            return (
+                isinstance(self.value, np.ndarray)
+                and self.value.shape == incoming.value.shape
+            )
+        return type(self.value) is type(incoming.value)
 
     def after_ui_init(self, placeholder_element):
         pass
