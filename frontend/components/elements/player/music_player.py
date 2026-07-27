@@ -41,6 +41,7 @@ class MusicPlayer(QtWidgets.QWidget):
     playClicked = QtCore.pyqtSignal(int)
     pauseClicked = QtCore.pyqtSignal(int)
     seekChanged = QtCore.pyqtSignal(int, float)
+    removeClicked = QtCore.pyqtSignal(int)
     WIDTH = 300
     HEIGHT = 50
 
@@ -83,6 +84,9 @@ class MusicPlayer(QtWidgets.QWidget):
 
         hbox_player = QtWidgets.QHBoxLayout()
         self.play_pause_button = QtWidgets.QPushButton("Play")
+        self.remove_button = QtWidgets.QPushButton("×")
+        self.remove_button.setFixedWidth(24)
+        self.remove_button.clicked.connect(lambda: self.removeClicked.emit(self.index))
 
         self.music_position_label = QtWidgets.QLabel(self.format_time(self.music_position.value))
         self.music_length_label = QtWidgets.QLabel(self.format_time(self.music_length))
@@ -97,6 +101,7 @@ class MusicPlayer(QtWidgets.QWidget):
         hbox_player.addWidget(self.music_position_label)
         hbox_player.addWidget(self.music_position_slider)
         hbox_player.addWidget(self.music_length_label)
+        hbox_player.addWidget(self.remove_button)
 
         vbox_core.addLayout(hbox_metadatas)
         vbox_core.addLayout(hbox_player)

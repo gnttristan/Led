@@ -2,6 +2,7 @@ import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from config import FREQ_BINS
+from frontend.components.elements.analysable_element import AnalysableElement
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.overrides.CNode import CNode
@@ -130,7 +131,7 @@ class FunctionNode(CNode):
         self.input_data = Element(self, "input_data", ElementValue(input_data))
         self.number_points = Element(self, "number_points", ElementValue(number_points))
         self.points = Element(self, "points", ElementValue(normalized_points(points)), link_terminal=False)
-        self.data = Element(self, "data", ElementValue(np.zeros(self._data_shape())))
+        self.data = AnalysableElement(self, "data", ElementValue(np.zeros(self._data_shape())))
 
         self.edit_button = QtWidgets.QPushButton("Edit")
         self.edit_button.clicked.connect(self.open_editor)

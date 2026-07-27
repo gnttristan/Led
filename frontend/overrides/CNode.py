@@ -19,7 +19,7 @@ from frontend.overrides.node_style import (
 class CNode(Node):
     sig_initiated = QtCore.pyqtSignal()
     INNER_MARGIN = 10
-    TERMINAL_WIDTH = 22
+    TERMINAL_WIDTH = 40
     TITLE_OFFSET = 26
     _SERDE_TAG = "__cnode_serde__"
     _STATE_IGNORED_PARAMS = {"self", "render", "alias"}

@@ -22,7 +22,6 @@ class AmplitudesNode(CNode, AudioUpdatable):
             db_floor: int | float = 5,
             db_ceil: int | float = 20,
             powering: int | float = 0.5,
-            normalisation: bool = True,
             render: bool = True,
             alias: str | None = None,
     ) -> None:
@@ -47,7 +46,6 @@ class AmplitudesNode(CNode, AudioUpdatable):
         self.db_ceil = Element(self, "db_ceil", ElementValue(db_ceil))
         self.powering = LinearDial(self, "powering", 0, 3, ElementValue(powering))
         self.data = Element(self, "data", ElementValue(np.zeros(self.freq_bins.value)))
-        self.normalisation = Element(self, "normalisation", ElementValue(normalisation))
 
     def c_update(self):
         self.buffer_to_amplitudes()
@@ -66,19 +64,9 @@ class AmplitudesNode(CNode, AudioUpdatable):
             right=0.0,
         )
         updated_amplitudes = updated_amplitudes * np.power(self.frequencies.value, self.powering.value)
-        # updated_amplitudes = 20.0 * np.log1p(np.maximum(updated_amplitudes, 1e-12))
-        # updated_amplitudes = np.maximum(updated_amplitudes + self.db_floor.value, 0)
-
-        if self.normalisation.value:
-            min_value = float(np.min(updated_amplitudes))
-            max_value = float(np.max(updated_amplitudes))
-            if min_value == max_value:
-                updated_amplitudes = np.zeros_like(updated_amplitudes)
-            else:
-                updated_amplitudes = np.interp(
-                    updated_amplitudes,
-                    [min_value, max_value],
-                    [0, 1]
-                )
+        amplitude_ratio = (2.0 * updated_amplitudes) / np.sum(self.window)
+        updated_amplitudes = 20.0 * np.log10(
+            np.maximum(amplitude_ratio, 1e-12)
+        )
 
         self.data.value[:] = updated_amplitudes

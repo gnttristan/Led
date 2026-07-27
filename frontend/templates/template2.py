@@ -4,11 +4,12 @@ from PyQt5 import QtCore, QtWidgets
 
 from config import DELAY_UPDATE, SAMPLE_RATE
 from frontend.enums.gradiant.gradiant_mode import GradiantMode
+from frontend.nodes.controllers import ESP32Node
 from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelineNode
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import RGBPPipelineNode, RollingNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
 from frontend.nodes.broadcast.broadcast_addition import BroadcastAdditionNode
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
 from frontend.nodes.buffer import BufferNode
@@ -145,16 +146,16 @@ def main():
         alias="colorize_pipeline",
     )
 
-    rgbp_pipeline = RGBPPipelineNode(
+    rgba_pipeline = RGBAPipelineNode(
         rgb=colorize_pipeline.data,
         alpha=amplitudes_with_rms.data,
-        alias="rgbp_pipeline",
+        alias="rgba_pipeline",
     )
 
-    # esp32_node = ESP32Node(
-    #     rgb=rgbp_pipeline.output_rgb,
-    #     alias="esp32_node",
-    # )
+    esp32_node = ESP32Node(
+        rgba=rgba_pipeline.rgba,
+        alias="esp32_node",
+    )
 
     constant_array_one = ConstantArrayNode(
         input_value=1,
@@ -167,7 +168,7 @@ def main():
         number_points=amplitudes_node.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
-        brushes=rgbp_pipeline.output_rgb,
+        brushes=rgba_pipeline.rgba,
         y_min=0,
         y_max=1,
     )

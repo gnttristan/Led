@@ -1,7 +1,5 @@
-- Make terminals a bit bigger and not black on black (not visible)
-- When an element dotted border is visible (on terminal dragging) set it's background different
-- Make node backgrounds a bit more gray but still dark
-- Move multi line chart element into frontend/components/elements/chart
-- Rename line chart node to multi line chart node
-- On element (or in other part if you find it better for architecture) :
-  - If value ndarray 1d make a little visualization button at the right that when clicked it adds / remove to the CNode a LineChartElement just under the corresponding element tracking its data
+- [x] convert esp32_ddp_ws2812b.ino to .cpp
+- [x] find port of esp32
+- [x] clear obsolete MicroPython firmware files and use esp32_ddp_ws2812b.cpp
+- [x] configure the host-side C++ toolchain with PlatformIO
+- [x] edit ESP32Node to send directly to the native ESP32 DDP receiver

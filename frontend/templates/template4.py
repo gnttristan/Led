@@ -5,10 +5,10 @@ from PyQt5 import QtCore, QtWidgets
 
 from config import DELAY_UPDATE
 from backend.updatable.updatable import audio_updatable_objects, visual_updatable_objects
-from frontend.nodes.external import ESP32Node
+from frontend.nodes.controllers import ESP32Node
 from frontend.nodes.simple import ConstantArrayNode
 from frontend.overrides.CNode import CNode
-from frontend.nodes.pipelines.visual import RollingNode, RGBPPipelineNode
+from frontend.nodes.pipelines.visual import RollingNode, RGBAPipelineNode
 from frontend.nodes.rainbow import RainbowNode
 from frontend.nodes.stream import StreamMicNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
@@ -44,10 +44,10 @@ def main():
         alias="constant_array",
     )
 
-    rgbp_pipeline = RGBPPipelineNode(
+    rgba_pipeline = RGBAPipelineNode(
         rgb=rolling.data,
         alpha=constant_array.data,
-        alias="rgbp_pipeline",
+        alias="rgba_pipeline",
     )
 
     spectogram_chart_node = SpectrogramChartNode(
@@ -56,14 +56,14 @@ def main():
         number_points=constant_array.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
-        brushes=rgbp_pipeline.output_rgb,
+        brushes=rgba_pipeline.rgba,
         y_min=0,
         y_max=1,
         alias="spectogram_chart_node",
     )
 
     esp32_node = ESP32Node(
-        rgb=rgbp_pipeline.output_rgb,
+        rgba=rgba_pipeline.rgba,
         alias="esp32_node",
     )
 

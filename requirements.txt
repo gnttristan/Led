@@ -11,6 +11,5 @@ PyQt5
 networkx
 pyqt-switch
 
-# For external leds
-esptool
-mpremote
+# Native ESP32 firmware build and upload
+platformio

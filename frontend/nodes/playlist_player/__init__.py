@@ -1,1 +1,1 @@
-from frontend.nodes.playlist_player.sc_playlist_player import SCPlaylistPlayer
+from frontend.nodes.playlist_player.soundcloud.player import SCPlaylistPlayer

@@ -34,8 +34,8 @@ class BarGraphChartElement(ChartElement):
         super().__init__(node, name, link_terminal=link_terminal, register_in_node=register_in_node)
 
     def draw(self):
-        self.node.window = pg.GraphicsLayoutWidget(title=self.title)
-        plot = self.node.window.addPlot()
+        self.window = pg.GraphicsLayoutWidget(title=self.title)
+        plot = self.window.addPlot()
         plot.setYRange(self.y_min, self.y_max)
         plot.setXRange(0, self.number_points)
         plot.setLabel("left", self.left_label)
@@ -49,8 +49,8 @@ class BarGraphChartElement(ChartElement):
             pen=(0, 0, 0, 0),
         )
         plot.addItem(self.spectrogram)
-        self.node.window.show()
-        return self.node.window
+        self.window.show()
+        return self.window
 
     def c_update(self):
         if self.spectrogram is None:

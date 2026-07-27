@@ -1,8 +1,10 @@
 import numpy as np
 
 from config import FREQ_BINS
+from frontend.components.elements.analysable_element import AnalysableElement
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
+from frontend.components.elements.textedit import TextEdit
 from frontend.overrides.CNode import CNode
 
 
@@ -22,9 +24,9 @@ class ConstantArrayNode(CNode):
             "data": {"io": "out"},
         }
         super().__init__(self.nodeName, terminals, render=render, alias=alias)
-        self.input_value = Element(self, "input_value", ElementValue(input_value))
+        self.input_value = TextEdit(self, "input_value", ElementValue(input_value))
         self.length = Element(self, "length", ElementValue(length))
-        self.data = Element(self, "data", ElementValue(np.zeros(int(self.length.value))))
+        self.data = AnalysableElement(self, "data", ElementValue(np.zeros(int(self.length.value))))
         self.input_value.valueChanged.connect(self._refresh_data)
         self.length.valueChanged.connect(self._refresh_data)
         self._refresh_data()

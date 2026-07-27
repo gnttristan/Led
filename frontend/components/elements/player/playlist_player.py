@@ -9,6 +9,11 @@ class PlaylistPlayer(QtWidgets.QWidget):
     playRequested = QtCore.pyqtSignal(int)
     pauseRequested = QtCore.pyqtSignal(int)
     seekRequested = QtCore.pyqtSignal(int, float)
+    searchRequested = QtCore.pyqtSignal(str)
+    addRequested = QtCore.pyqtSignal(object)
+    searchResults = QtCore.pyqtSignal(object)
+    loadingChanged = QtCore.pyqtSignal(bool)
+    removeRequested = QtCore.pyqtSignal(int)
 
     def __init__(
         self,
@@ -28,9 +33,56 @@ class PlaylistPlayer(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        controls = QtWidgets.QHBoxLayout()
+        self.search_input = QtWidgets.QLineEdit()
+        self.search_input.setPlaceholderText("Search or paste a music URL")
+        self.search_button = QtWidgets.QPushButton("Search")
+        self.search_button.clicked.connect(lambda: self.searchRequested.emit(self.search_input.text()))
+        self.search_input.returnPressed.connect(self.search_button.click)
+        controls.addWidget(self.search_input)
+        controls.addWidget(self.search_button)
+        self.loader = QtWidgets.QProgressBar()
+        self.loader.setRange(0, 0)
+        self.loader.setFixedWidth(80)
+        self.loader.hide()
+        controls.addWidget(self.loader)
+        layout.addLayout(controls)
+        self.search_results = QtWidgets.QListWidget()
+        self.search_results.hide()
+        layout.addWidget(self.search_results)
+        self.add_selected_button = QtWidgets.QPushButton("Add selected")
+        self.add_selected_button.clicked.connect(self._add_selected)
+        self.add_selected_button.hide()
+        layout.addWidget(self.add_selected_button)
+        self.loadingChanged.connect(self.set_loading)
         layout.addWidget(self.music_player_container)
 
         self.set_playlist_metadata(self.playlist_metadata)
+
+    def set_search_results(self, results):
+        self.search_results.clear()
+        for result in results:
+            item = QtWidgets.QListWidgetItem(
+                f"{result.get('uploader', '')} - {result.get('title', result.get('url', ''))}"
+            )
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, result)
+        self.search_results.addItem(item)
+        self.search_results.setVisible(bool(results))
+        self.add_selected_button.setVisible(bool(results))
+        self.set_loading(False)
+
+    def set_loading(self, loading):
+        self.loader.setVisible(loading)
+        self.search_input.setEnabled(not loading)
+        self.search_button.setEnabled(not loading)
+        self.search_results.setEnabled(not loading)
+        self.add_selected_button.setEnabled(not loading)
+
+    def _add_selected(self):
+        item = self.search_results.currentItem()
+        if item is not None:
+            self.set_loading(True)
+            self.addRequested.emit(item.data(QtCore.Qt.ItemDataRole.UserRole))
 
     def set_playlist_metadata(self, playlist_metadata):
         self.playlist_metadata = playlist_metadata or []
@@ -57,6 +109,7 @@ class PlaylistPlayer(QtWidgets.QWidget):
             music_player.playClicked.connect(self.on_play_clicked)
             music_player.pauseClicked.connect(self.on_pause_clicked)
             music_player.seekChanged.connect(self.on_seek_changed)
+            music_player.removeClicked.connect(self.removeRequested)
 
             self.music_player_layout.addWidget(music_player)
             self.music_players.append(music_player)

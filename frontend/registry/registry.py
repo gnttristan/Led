@@ -3,7 +3,7 @@ from pyqtgraph.flowchart import registerNodeType
 from frontend.nodes.broadcast.broadcast_fraction import BroadcastFractionNode
 from frontend.nodes.broadcast.broadcast_indexes import BroadcastIndexesNode
 from frontend.nodes.broadcast.broadcast_rescaler import BroadcastRescalerNode
-from frontend.nodes.external import ESP32Node
+from frontend.nodes.controllers import ESP32Node
 from frontend.nodes.features import (
     ChromaPrismNode,
     CrestFactorNode,
@@ -28,7 +28,7 @@ from frontend.nodes.pipelines.auditory.filter.low_filter import LowFilterPipelin
 from frontend.nodes.pipelines.auditory.rms import RMSPipelineNode
 from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import RGBAPipelineNode, RGBPPipelineNode, RollingNode
+from frontend.nodes.pipelines.visual import RGBAPipelineNode, RollingNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow import GradiantNode, RainbowNode
 from frontend.nodes.buffer import BufferNode
@@ -39,7 +39,8 @@ from frontend.nodes.broadcast.broadcast_addition import BroadcastAdditionNode
 from frontend.nodes.routing_node import GatheringNode
 from frontend.nodes.stream import StreamPlayerNode, StreamMicNode
 from frontend.nodes.visual.bar_graph_chart import BarGraphChartNode
-from frontend.nodes.visual.line_chart import LineChartNode
+from frontend.nodes.visual.multi_line_chart import MultiLineChartNode
+from frontend.nodes.visual.single_line_chart import SingleLineChartNode
 from frontend.nodes.visual.spectrogram_chart import SpectrogramChartNode
 from frontend.nodes.simple.constant_array import ConstantArrayNode
 from frontend.nodes.pipelines.visual import SingleColorNode
@@ -53,7 +54,7 @@ from frontend.nodes.windows_fcts.max_window_fct import MaxWindowFct
 NODE_DIRECTORY_COLORS = {
     "frontend.nodes.broadcast": "#c56f38",
     "frontend.nodes.buffer": "#4f86c6",
-    "frontend.nodes.external": "#b84f58",
+    "frontend.nodes.controllers": "#b84f58",
     "frontend.nodes.features": "#39a071",
     "frontend.nodes.function": "#b89a3f",
     "frontend.nodes.group_node": "#8f60b8",
@@ -109,7 +110,8 @@ nodes = [
     MaxWindowFct,
     SpectrogramChartNode,
     BarGraphChartNode,
-    LineChartNode,
+    MultiLineChartNode,
+    SingleLineChartNode,
     RainbowNode,
     GradiantNode,
     BroadcastAdditionNode,
@@ -125,7 +127,6 @@ nodes = [
     StreamMicNode,
     SCPlaylistPlayer,
     RGBAPipelineNode,
-    RGBPPipelineNode,
     BroadcastFractionNode,
     BroadcastIndexesNode,
     BroadcastRescalerNode,

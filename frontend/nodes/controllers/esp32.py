@@ -5,34 +5,45 @@ import time
 
 import numpy as np
 
-from config import DELAY_UPDATE, FREQ_BINS
-from backend.updatable.updatable import VisualUpdatable
+from config import DELAY_UPDATE, FREQ_BINS, SKIP_LED_NUMBERS
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
-from frontend.overrides.CNode import CNode
+from frontend.components.elements.dials import LinearDial
+from frontend.nodes.controllers.controller_node import ControllerNode
 
 
-class ESP32Node(CNode, VisualUpdatable):
+class ESP32Node(ControllerNode):
     nodeName = "ESP32"
 
     def __init__(
         self,
-        rgb: np.ndarray = np.zeros((FREQ_BINS, 3), dtype=np.uint8),
-        wled_ip: str = "192.168.1.112",
+        rgba: np.ndarray = np.zeros((FREQ_BINS, 4), dtype=np.float32),
+        power_log: float = 1,
+        min_alpha: float = 4. / 255.,
+        remove_alpha: float = 4. / 255.,
+        esp32_ip: str = "192.168.1.11",
         ddp_port: int = 4048,
-        led_count: int = FREQ_BINS,
+        led_count: int = FREQ_BINS + SKIP_LED_NUMBERS,
         render: bool = True,
         alias: str | None = None,
     ) -> None:
-        terminals = {
-            "rgb": {"io": "in"},
-        }
+        super().__init__(
+            rgba,
+            power_log=power_log,
+            min_alpha=min_alpha,
+            remove_alpha=remove_alpha,
+            render=render,
+            alias=alias,
+        )
 
-        CNode.__init__(self, self.nodeName, terminals, render=render, alias=alias)
-        VisualUpdatable.__init__(self)
-
-        self.rgb = Element(self, "rgb", ElementValue(rgb))
-        self.wled_ip = Element(self, "wled_ip", ElementValue(wled_ip))
+        self.power_log = LinearDial(
+            self,
+            "power_log",
+            0,
+            10,
+            ElementValue(power_log),
+        )
+        self.esp32_ip = Element(self, "esp32_ip", ElementValue(esp32_ip))
         self.ddp_port = Element(self, "ddp_port", ElementValue(ddp_port))
         self.led_count = Element(self, "led_count", ElementValue(led_count))
 
@@ -51,7 +62,7 @@ class ESP32Node(CNode, VisualUpdatable):
         """
         Kept for compatibility with your node system.
 
-        The actual sending is done in the background thread so WLED keeps
+        The actual sending is done in the background thread so the ESP32 keeps
         receiving frames even if c_update timing is irregular.
         """
         pass
@@ -65,7 +76,7 @@ class ESP32Node(CNode, VisualUpdatable):
                 frame = self._get_rgb_frame()
                 self._send_ddp_frame(frame)
             except Exception as exc:
-                print(f"[WLED] Failed to send frame: {exc}")
+                print(f"[ESP32] Failed to send frame: {exc}")
 
             next_time += frame_period
             delay = next_time - time.monotonic()
@@ -86,7 +97,8 @@ class ESP32Node(CNode, VisualUpdatable):
         If the input has fewer LEDs, it pads black.
         If the input has too many LEDs, it truncates.
         """
-        rgb_array = np.asarray(self.rgb.value, dtype=np.uint8)
+        self.process_rgba()
+        rgb_array = np.clip(self.rgb.value, 0, 255).astype(np.uint8)
 
         if rgb_array.ndim != 2 or rgb_array.shape[1] != 3:
             raise ValueError(
@@ -106,9 +118,9 @@ class ESP32Node(CNode, VisualUpdatable):
 
     def _send_ddp_frame(self, rgb_bytes: bytes):
         """
-        Sends one full RGB frame to WLED using DDP over UDP.
+        Sends one full RGB frame to the ESP32 using DDP over UDP.
 
-        WLED expects DDP on UDP port 4048 by default.
+        The firmware listens on UDP port 4048 by default.
         Payload is raw RGB bytes:
             LED 0: R, G, B
             LED 1: R, G, B
@@ -124,7 +136,7 @@ class ESP32Node(CNode, VisualUpdatable):
 
         flags = 0x41
         sequence = self.sequence & 0x0F
-        data_type = 0x0A
+        data_type = 0x01
         destination = 0x01
         data_offset = 0
         data_len = len(rgb_bytes)
@@ -143,7 +155,7 @@ class ESP32Node(CNode, VisualUpdatable):
 
         self.socket.sendto(
             packet,
-            (self.wled_ip.value, int(self.ddp_port.value)),
+            (self.esp32_ip.value, int(self.ddp_port.value)),
         )
 
         self.sequence = (self.sequence + 1) & 0x0F

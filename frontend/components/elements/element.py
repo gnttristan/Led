@@ -1,7 +1,7 @@
 from typing import Any
 
 import numpy as np
-from PyQt5.QtGui import QFont, QPainter, QPen
+from PyQt5.QtGui import QColor, QFont, QPainter, QPen
 from PyQt5 import QtCore, QtWidgets
 from pyqtgraph.flowchart.Terminal import TerminalGraphicsItem
 
@@ -329,6 +329,7 @@ class Element(QtWidgets.QWidget):
         super().paintEvent(event)
         if self._drop_hover:
             painter = QPainter(self)
+            painter.fillRect(self.rect(), QColor(255, 255, 255, 12))
             painter.setPen(QPen(QtCore.Qt.GlobalColor.white, 1, QtCore.Qt.PenStyle.DotLine))
             painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
 

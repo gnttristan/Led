@@ -10,13 +10,14 @@ from frontend.group_nodes import KickDecayNode
 from frontend.nodes.broadcast.broadcast_addition import BroadcastAdditionNode
 from frontend.nodes.broadcast.broadcast_indexes import BroadcastIndexesNode
 from frontend.nodes.buffer import BufferNode
-from frontend.nodes.external import ESP32Node
+from frontend.nodes.controllers import ESP32Node
 from frontend.nodes.function import FunctionNode
 from frontend.nodes.pipelines import AmplitudesNode
 from frontend.nodes.pipelines.amplitudes.avg_frequencies import AvgFrequenciesNode
 from frontend.nodes.pipelines.amplitudes.linear_amplitude_transformer_node import LinearAmplitudesTransformerNode
+from frontend.nodes.pipelines.transforms.operator_node import OperatorPipelineNode
 from frontend.nodes.pipelines.transforms.value_transformer import ValueTransformerPipelineNode
-from frontend.nodes.pipelines.visual import SingleColorNode, RGBAPipelineNode, RollingNode, RGBPPipelineNode
+from frontend.nodes.pipelines.visual import SingleColorNode, RGBAPipelineNode, RollingNode
 from frontend.nodes.playlist_player import SCPlaylistPlayer
 from frontend.nodes.rainbow import GradiantNode, RainbowNode
 from frontend.nodes.stream.stream_player_node import StreamPlayerNode
@@ -60,12 +61,17 @@ def main():
         buffer=buffer_node.data,
         fft_size=analysis_chunk_size,
         # powering=0.5,
-        normalisation=True,
         alias="amplitudes_node",
     )
 
+    amplitudes_node_transformed = ValueTransformerPipelineNode(
+        input_value=amplitudes_node.data,
+        input_value_interval=(-15, 25),
+        output_value_interval=(0, 1),
+    )
+
     avg_frequencies_node = AvgFrequenciesNode(
-        input_amplitudes=amplitudes_node.data,
+        input_amplitudes=amplitudes_node_transformed.output_value,
         input_frequencies=amplitudes_node.frequencies,
         alias="avg_frequencies_node",
     )
@@ -78,7 +84,7 @@ def main():
     )
 
     amplitudes_transformer_node = LinearAmplitudesTransformerNode(
-        input_data=amplitudes_node.data,
+        input_data=amplitudes_node_transformed.output_value,
         correlation_offset=avg_frequencies_correlation_offset.output_value,
         correlation_step=0.02,
         alias="amplitudes_transformer_node",
@@ -89,6 +95,15 @@ def main():
         input_value_interval=[0, 7],
         output_value_interval=[0, 1],
         alias="amplitudes_node_normalized",
+    )
+
+    exp_amplitudes = OperatorPipelineNode(
+        arguments=[
+            amplitudes_node_normalized.output_value,
+            "**",
+            "2",
+        ],
+        length=amplitudes_node_normalized.output_value.value.shape[-1],
     )
 
     avg_frequencies_color_level = ValueTransformerPipelineNode(
@@ -115,7 +130,7 @@ def main():
     )
 
     broadcast_indexes_node = BroadcastIndexesNode(
-        input_data=amplitudes_node_normalized.output_value,
+        input_data=exp_amplitudes.data,
         indexes=function_node.data.value,
         alias="broadcast_node",
     )
@@ -165,7 +180,7 @@ def main():
     )
 
 
-    rgbp_pipeline_node = RGBPPipelineNode(
+    rgba_pipeline_node = RGBAPipelineNode(
         rgb=broadcast_addition.data,
         alpha=broadcast_indexes_node.data,
     )
@@ -176,14 +191,14 @@ def main():
         number_points=amplitudes_node.data.value.shape[0],
         left_label="Frequency",
         bottom_label="Amplitude",
-        brushes=rgbp_pipeline_node.output_rgb,
+        brushes=rgba_pipeline_node.rgba,
         y_min=0,
         y_max=1,
     )
 
-    # esp32_node = ESP32Node(
-    #     rgb=rgbp_pipeline_node.output_rgb
-    # )
+    esp32_node = ESP32Node(
+        rgba=rgba_pipeline_node.rgba,
+    )
 
     flowchart = CFlowchart(
         terminals={

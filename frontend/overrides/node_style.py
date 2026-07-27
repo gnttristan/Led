@@ -122,13 +122,16 @@ def tint(hex_color: str, ratio: float = 0.16, base: str = "#24272b") -> str:
 
 
 def node_widget_stylesheet(module_name: str | None = None) -> str:
-    return NODE_WIDGET_STYLESHEET.replace("__NODE_BACKGROUND__", tint(node_accent(module_name)))
+    return NODE_WIDGET_STYLESHEET.replace(
+        "__NODE_BACKGROUND__",
+        tint(node_accent(module_name), 0.08, "#30343a"),
+    )
 
 
 def apply_node_graphics_style(item, name: str, module_name: str | None = None) -> None:
     accent = node_accent(module_name)
     item.setPen(pg.mkPen(darken(accent, 46), width=1.2))
-    item.setBrush(pg.mkBrush(QtGui.QColor(tint(accent, 0.18))))
+    item.setBrush(pg.mkBrush(QtGui.QColor(tint(accent, 0.14, "#2b2f34"))))
     item.hoverBrush = pg.mkBrush(QtGui.QColor(tint(accent, 0.24)))
     item.selectBrush = pg.mkBrush(42, 48, 58, 255)
     item.selectPen = pg.mkPen(QtGui.QColor("#9cc9ff"), width=2)
@@ -137,11 +140,11 @@ def apply_node_graphics_style(item, name: str, module_name: str | None = None) -
 
 def style_terminal(terminal_item, io: str, accent: str, linked: bool = False) -> None:
     fill = QtGui.QColor(accent)
-    pen = QtGui.QPen(QtGui.QColor("#111417"))
+    pen = QtGui.QPen(QtGui.QColor("#d7dce2"))
     pen.setWidthF(1.1)
     terminal_item.setBrush(pg.mkBrush(fill))
     terminal_item.box.setPen(pen)
-    terminal_item.box.setRect(0, 0, 9, 9)
+    terminal_item.box.setRect(0, 0, 12, 12)
 
 
 def color_button_stylesheet(hex_value: str) -> str:

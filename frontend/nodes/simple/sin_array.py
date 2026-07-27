@@ -1,6 +1,7 @@
 import numpy as np
 
 from config import FREQ_BINS
+from frontend.components.elements.analysable_element import AnalysableElement
 from frontend.components.elements.element import Element
 from frontend.components.elements.element_value import ElementValue
 from frontend.overrides.CNode import CNode
@@ -31,7 +32,7 @@ class SinArrayNode(CNode):
         self.number_points = Element(self, "number_points", ElementValue(number_points))
         self.center = Element(self, "center", ElementValue(center))
         self.offset = Element(self, "offset", ElementValue(offset))
-        self.data = Element(self, "data", ElementValue(np.zeros(int(self.number_points.value))))
+        self.data = AnalysableElement(self, "data", ElementValue(np.zeros(int(self.number_points.value))))
 
         self.number_cycle.valueChanged.connect(self._refresh_data)
         self.number_points.valueChanged.connect(self._refresh_data)

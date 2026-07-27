@@ -11,8 +11,13 @@ class ChartElement(Element):
         name: str,
         link_terminal: bool = True,
         register_in_node: bool = True,
+        show_chart_button: bool = True,
     ) -> None:
         super().__init__(node, name, "", link_terminal=link_terminal, register_in_node=register_in_node)
+        self.window = None
+
+        if not show_chart_button:
+            return
 
         self.chart_button = QtWidgets.QToolButton()
         self.chart_button.setCheckable(True)
@@ -28,11 +33,11 @@ class ChartElement(Element):
 
     def _toggle_chart(self, is_open):
         if is_open:
-            if self.node.window is None:
+            if self.window is None:
                 self.node.draw()
-            self.node.window.show()
+            self.window.show()
             self.chart_button.setArrowType(QtCore.Qt.DownArrow)
         else:
-            if self.node.window is not None:
-                self.node.window.hide()
+            if self.window is not None:
+                self.window.hide()
             self.chart_button.setArrowType(QtCore.Qt.RightArrow)
